@@ -1,0 +1,7 @@
+; TODO: This configuration currently not used in pytest-pep8, see
+; <https://bitbucket.org/pytest-dev/pytest-pep8/issues/11/add-option-to-use-pep8rc-configuration>
+
+[pep8]
+show-source = yes
+statistics = yes
+count = yes

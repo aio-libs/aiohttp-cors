@@ -1,0 +1,19 @@
+language: python
+sudo: false
+python:
+  - 3.3
+  - 3.4
+  - 3.5
+
+install:
+  - pip install --upgrade pip setuptools
+  - pip install -Ur requirements-dev.txt
+  - python setup.py develop
+
+script:
+  python setup.py test
+
+env:
+  matrix:
+    - PYTHONASYNCIODEBUG=1
+    - PYTHONASYNCIODEBUG=0

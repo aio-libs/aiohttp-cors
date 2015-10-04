@@ -115,9 +115,28 @@ the specified headers are allowed::
 Browser checks response to preflight request, and, if actual request allowed,
 does actual request.
 
+Installation
+============
+
+You can install ``aiohttp_cors`` as typical Python library from PyPI or
+from git::
+
+   $ pip install aiohttp_cors
+
+Note that ``aiohttp_cors`` works only with ``aiohttp`` versions greater than
+XXX.
+.. TODO:: specify ``aiohttp`` version
 
 Usage
 =====
+
+To use ``aiohttp_cors`` you need to configure the application and
+enable CORS on routes of resources that you want to expose.
+
+.. TODO:: fill this
+
+Security
+========
 
 .. TODO:: fill this
 

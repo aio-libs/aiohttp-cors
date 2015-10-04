@@ -1,5 +1,10 @@
 import sys
 
+# TODO: add option or in other way allow developer to enable debug logging.
+if False:
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
 
 def pytest_cmdline_preparse(args):
     if sys.version_info[:2] == (3, 5):

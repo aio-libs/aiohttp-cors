@@ -132,9 +132,133 @@ Usage
 =====
 
 To use ``aiohttp_cors`` you need to configure the application and
-enable CORS on routes of resources that you want to expose.
+enable CORS on routes of resources that you want to expose::
 
-.. TODO:: fill this
+    import asyncio
+    from aiohttp import web
+    import aiohttp_cors
+
+    @asyncio.coroutine
+    def handler(request):
+        return web.Response(
+            text="Hello!",
+            headers={
+                "X-Custom-Server-Header": "Custom data",
+            })
+
+    app = web.Application()
+
+    # `aiohttp_cors.setup` returns `aiohttp_cors.CorsConfig` instance.
+    # The `cors` instance will store CORS configuration for the
+    # application.
+    cors = aiohttp_cors.setup(app)
+
+    # To enable CORS processing for specific route you need to add
+    # that route to the CORS configuration object and specify it's
+    # CORS options.
+    cors.add(
+        app.router.add_route("GET", "/hello", handler), {
+            "http://client.example.org": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers=("X-Custom-Server-Header",),
+                allow_headers=("X-Requested-With", "Content-Type"),
+                max_age=3600,
+            )
+        })
+
+Each route has it's own CORS configuration passed in ``CorsConfig.add()``
+method.
+CORS configuration is a mapping from origins to options for that origins.
+
+In the example above CORS is configured for the resource under path ``/hello``
+and HTTP method ``GET``, and in the context of CORS:
+
+  * This resource will be available using CORS only to
+    ``http://client.example.org`` origin.
+
+  * Passing of credentials to this resource will be allowed.
+
+  * The resource will expose to the client ``X-Custom-Server-Header``
+    server header.
+
+  * The client will be allowed to pass ``X-Requested-With`` and
+    ``Content-Type`` headers to the server.
+
+  * Preflight requests will be allowed to be cached by client for ``3600``
+    seconds.
+
+Resource will be available only to the explicitly specified origins.
+You can specify "all other origins" using special ``*`` origin::
+
+    cors.add(route, {
+            "*":
+                aiohttp_cors.ResourceOptions(allow_credentials=False),
+            "http://client.example.org":
+                aiohttp_cors.ResourceOptions(allow_credentials=True),
+        })
+
+Here the resource specified by ``route`` will be available to all origins with
+disallowed credentials passing, and with allowed credentials passing only to
+``http://client.example.org``.
+
+By default ``ResourceOptions`` will be constructed without any allowed CORS
+options.
+This means, that resource will be available using CORS to specified origin,
+but client will not be allowed to send either credentials,
+or send non-simple headers, or read from server non-simple headers.
+
+To enable sending or receiving all headers you can specify special value
+``*`` instead of sequence of headers::
+
+    cors.add(route, {
+            "http://client.example.org":
+                aiohttp_cors.ResourceOptions(
+                    expose_headers="*",
+                    allow_headers="*"),
+        })
+
+You can specify default CORS-enabled resource options using
+``aiohttp_cors.setup()``'s ``defaults`` argument::
+
+    cors = aiohttp_cors.setup(app, defaults={
+            # Allow all to read all CORS-enabled resources from
+            # http://client.example.org.
+            "http://client.example.org": aiohttp_cors.ResourceOptions(),
+        })
+
+    # Enable CORS on resources.
+
+    # According to defaults POST and PUT will be available only to
+    # "http://client.example.org".
+    cors.add(app.router.add_route("POST", "/hello", handler_post))
+    cors.add(app.router.add_route("PUT", "/hello", handler_put))
+
+    # In addition to "http://client.example.org", GET request will be allowed
+    # from "http://other-client.example.org" origin.
+    cors.add(app.router.add_route("GET", "/hello", handler), {
+            "http://other-client.example.org"
+        })
+
+    # CORS will be enabled only on the resources added to `CorsConfig`,
+    # so following resource will be NOT CORS-enabled.
+    app.router.add_route("GET", "/private", handler))
+
+Here is an example of how to enable CORS for all origins with all CORS
+features::
+
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+    })
+
+    # Add all resources to `CorsConfig`.
+    cors.add(app.router.add_route("GET", "/hello", handler_get))
+    cors.add(app.router.add_route("PUT", "/hello", handler_put))
+    cors.add(app.router.add_route("POST", "/hello", handler_put))
+    cors.add(app.router.add_route("DELETE", "/hello", handler_delete))
 
 Security
 ========

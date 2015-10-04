@@ -121,6 +121,15 @@ Usage
 
 .. TODO:: fill this
 
+License
+=======
+
+Copyright 2015 Vladimir Rutsky <vladimir@rutsky.org>.
+
+Licensed under the
+`Apache License, Version 2.0 <https://www.apache.org/licenses/LICENSE-2.0>`__,
+see ``LICENSE`` file for details.
+
 .. _cors: http://www.w3.org/TR/cors/
 .. _aiohttp: https://github.com/KeepSafe/aiohttp/
 .. _sop: https://en.wikipedia.org/wiki/Same-origin_policy

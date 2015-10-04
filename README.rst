@@ -125,7 +125,8 @@ from git::
 
 Note that ``aiohttp_cors`` works only with ``aiohttp`` versions greater than
 XXX.
-.. TODO:: specify ``aiohttp`` version
+
+TODO: fill this specify ``aiohttp`` version
 
 Usage
 =====
@@ -138,7 +139,7 @@ enable CORS on routes of resources that you want to expose.
 Security
 ========
 
-.. TODO:: fill this
+TODO: fill this
 
 License
 =======

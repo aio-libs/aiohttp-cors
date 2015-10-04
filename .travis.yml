@@ -15,5 +15,5 @@ script:
 
 env:
   matrix:
-    - PYTHONASYNCIODEBUG=1
-    - PYTHONASYNCIODEBUG=0
+    - PYTHONASYNCIODEBUG=nonemptystring
+    - PYTHONASYNCIODEBUG=

@@ -68,7 +68,7 @@
         'no_cors': false
       }
     },
-    'GET resource default': {
+    'GET cors_resource default': {
       // Resource with CORS configuration can be obtained only according to
       // CORS configuration.
       method: 'GET',
@@ -80,7 +80,21 @@
         'free_for_all': true,
         'no_cors': false
       }
+    },
+    'GET cors_resource with credentials': {
+      // Should be same as without credentials on this route.
+      method: 'GET',
+      path: 'cors_resource',
+      withCredentials: true,
+      allowed: {
+        'origin': true,
+        'allowing': true,
+        'denying': false,
+        'free_for_all': true,
+        'no_cors': false
+      }
     }
+
   };
 
   // Based on an example from <http://www.html5rocks.com/en/tutorials/cors/>.
@@ -126,6 +140,10 @@
       }
 
       onTestDone(result);
+    }
+
+    if (testData.withCredentials) {
+      xhr.withCredentials = true;
     }
 
     xhr.onload = function() {

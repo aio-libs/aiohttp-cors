@@ -74,13 +74,18 @@ class IntegrationServers:
                 headers={hdrs.CONTENT_TYPE: "application/json"})
 
         @asyncio.coroutine
+        def handle_resource(request: web.Request) -> web.StreamResponse:
+            return web.Response(
+                text="""{"type": "resource"}""",
+                headers={hdrs.CONTENT_TYPE: "application/json"})
+
+        @asyncio.coroutine
         def handle_servers_addresses(
                 request: web.Request) -> web.StreamResponse:
             servers_addresses = \
                 {name: descr.url for name, descr in self.servers.items()}
             return web.Response(
-                text=json.dumps(servers_addresses),
-                headers={hdrs.CONTENT_TYPE: "application/json"})
+                text=json.dumps(servers_addresses))
 
         # For most resources:
         # "origin" server has no CORS configuration.
@@ -106,10 +111,12 @@ class IntegrationServers:
         self.servers["origin"].app.router.add_route(
             "GET", "/servers_addresses", handle_servers_addresses)
 
-        # Add routes.
+        # Add routes to all servers.
         for server_name in server_names:
             app = self.servers[server_name].app
             app.router.add_route("GET", "/no_cors.json", handle_no_cors)
+            app.router.add_route("GET", "/cors_resource", handle_resource,
+                                 name="cors_resource")
 
         # Start servers.
         for server_name, server_descr in self.servers.items():
@@ -154,6 +161,11 @@ class IntegrationServers:
                 continue
             server_descr.cors = setup(
                 server_descr.app, defaults=default_config)
+
+        # Add CORS routes.
+        for server_name in cors_server_names:
+            server_descr = self.servers[server_name]
+            server_descr.cors.add(server_descr.app.router["cors_resource"])
 
     @asyncio.coroutine
     def stop_servers(self):

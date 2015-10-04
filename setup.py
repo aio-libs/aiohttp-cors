@@ -78,6 +78,6 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 3 - Alpha",
     ],
 )

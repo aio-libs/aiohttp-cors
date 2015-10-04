@@ -100,8 +100,11 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 comment=no
 
 # Template used to display messages. This is a python new-style format string
-# used to format the message information. See doc for all details
-msg-template={C}:{msg_id}:{line:3d},{column:2d}: {msg} ({symbol})
+# used to format the message information. See doc for all details.
+# Path/line on separate added to allow IDE to parse error messages and
+# provide interactive link on the place of the error.
+msg-template={path}:{line}:
+    {C}:{msg_id}:{line:3d},{column:2d}: {msg} ({symbol})
 
 
 [LOGGING]

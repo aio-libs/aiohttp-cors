@@ -5,4 +5,5 @@ pytest-cov
 pytest-runner
 pytest-flakes
 pytest-pylint
+-e git+git@github.com:alexsdutton/aiohttp.git@signals-v2#egg=aiohttp
 -e .

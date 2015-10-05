@@ -173,19 +173,19 @@ CORS configuration is a mapping from origins to options for that origins.
 In the example above CORS is configured for the resource under path ``/hello``
 and HTTP method ``GET``, and in the context of CORS:
 
-  * This resource will be available using CORS only to
-    ``http://client.example.org`` origin.
+* This resource will be available using CORS only to
+  ``http://client.example.org`` origin.
 
-  * Passing of credentials to this resource will be allowed.
+* Passing of credentials to this resource will be allowed.
 
-  * The resource will expose to the client ``X-Custom-Server-Header``
-    server header.
+* The resource will expose to the client ``X-Custom-Server-Header``
+  server header.
 
-  * The client will be allowed to pass ``X-Requested-With`` and
-    ``Content-Type`` headers to the server.
+* The client will be allowed to pass ``X-Requested-With`` and
+  ``Content-Type`` headers to the server.
 
-  * Preflight requests will be allowed to be cached by client for ``3600``
-    seconds.
+* Preflight requests will be allowed to be cached by client for ``3600``
+  seconds.
 
 Resource will be available only to the explicitly specified origins.
 You can specify "all other origins" using special ``*`` origin::

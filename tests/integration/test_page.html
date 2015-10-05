@@ -41,6 +41,8 @@
       <input value="Run tests" type="submit">
     </div>
   </form>
+  <div id="log" class="log">
+  </div>
   <textarea id="results" class="results">
   </textarea>
 
@@ -94,8 +96,35 @@
         'no_cors': false
       }
     }
-
   };
+
+  function logMessage(level, args) {
+    console[level].apply(console, args);
+
+    var logContainer = document.getElementById('log');
+
+    var logEntry = document.createElement('div');
+    logEntry.classList.add(level);
+
+    var i;
+    for (i = 0; i !== args.length; ++i) {
+      var partData = args[i];
+      var part = document.createElement('span');
+      var txt = document.createTextNode(partData + '');
+      part.appendChild(txt);
+      logEntry.appendChild(part);
+    }
+
+    logContainer.appendChild(logEntry);
+  }
+
+  function log() {
+    logMessage('log', arguments);
+  }
+
+  function error() {
+    logMessage('error', arguments);
+  }
 
   // Based on an example from <http://www.html5rocks.com/en/tutorials/cors/>.
   function createCORSRequest(method, url) {
@@ -136,7 +165,7 @@
       };
 
       if (!testSucceed) {
-        console.error('Test ' + testName + ' failed', result.data);
+        error('Test ' + testName + ' failed', result.data);
       }
 
       onTestDone(result);
@@ -218,7 +247,7 @@
   }
 
   function setExceptionAsResult(ex) {
-    console.error(ex);
+    error(ex);
 
     setResults({
       'status': 'error',
@@ -346,10 +375,10 @@
         }
 
         if (numFailed > 0) {
-          console.error(
+          error(
             'Failed ' + numFailed + ' tests of ' + numTests, failedTests);
         } else {
-          console.log('All ' + numTests + ' test passed');
+          log('All ' + numTests + ' tests passed');
         }
       });
     } catch(ex) {
@@ -367,18 +396,18 @@
 
     xhr.onload = function() {
       if (xhr.status !== 200) {
-        console.error(
+        error(
           '/servers_addresses request failed with status ' + xhr.status,
           xhr.responseText);
 
       } else {
-        console.log('Received server addressess:', xhr.response);
+        log('Received server addressess:', xhr.response);
         setServersUrls(JSON.parse(xhr.responseText));
       }
     };
 
     xhr.onerror = function() {
-      console.error('/servers_addresses request failed');
+      error('/servers_addresses request failed');
     };
 
     xhr.send();

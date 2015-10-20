@@ -7,10 +7,10 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-env/
-build/
+/env/
+/build/
 develop-eggs/
-dist/
+/dist/
 downloads/
 eggs/
 .eggs/
@@ -21,7 +21,7 @@ sdist/
 var/
 *.egg-info/
 .installed.cfg
-*.egg
+/*.egg
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -35,20 +35,13 @@ pip-delete-this-directory.txt
 
 # Unit test / coverage reports
 htmlcov/
-.tox/
+/.tox/
 .coverage
 .coverage.*
-.cache
+/.cache
 nosetests.xml
 coverage.xml
 *,cover
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
 
 # Sphinx documentation
 docs/_build/

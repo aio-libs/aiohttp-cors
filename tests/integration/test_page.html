@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <title>aiohttp_cors testing</title>
+  <style>
+    body {
+      width: 900px;
+      margin: 0 auto;
+    }
+
+    textarea.results {
+      width: 100%;
+      height: 400px;
+    }
+
+    .serverAddressLabel {
+      display: block;
+      float: left;
+      width: 400px;
+    }
+
+    .templates {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="templates">
+    <div id="serverAddressTemplate">
+      <label>
+        <span id="label" class="serverAddressLabel"></span>
+        <input id="input" type="text">
+      </label>
+    </div>
+  </div>
+
+  <form name="test" id="testForm">
+    <div>
+      <input id="fillOutButton" value="Fill out addresses" type="button">
+      <input value="Run tests" type="submit">
+    </div>
+  </form>
+  <div id="log" class="log">
+  </div>
+  <textarea id="results" class="results">
+  </textarea>
+
+<script>
+(window.cors = (function() {
+  'strict';
+
+  // Copyright 2015 Vladimir Rutsky <vladimir@rutsky.org>
+  // Licensed under the Apache License, Version 2.0.
+
+  var serversNames = [
+    'origin', 'allowing', 'denying', 'free_for_all', 'no_cors'
+  ];
+
+  var tests = {
+    'GET no_cors.json': {
+      // Resource without CORS configuration can be obtained only from origin.
+      method: 'GET',
+      path: 'no_cors.json',
+      allowed: {
+        'origin': true,
+        'allowing': false,
+        'denying': false,
+        'free_for_all': false,
+        'no_cors': false
+      }
+    },
+    'GET cors_resource default': {
+      // Resource with CORS configuration can be obtained only according to
+      // CORS configuration.
+      method: 'GET',
+      path: 'cors_resource',
+      allowed: {
+        'origin': true,
+        'allowing': true,
+        'denying': false,
+        'free_for_all': true,
+        'no_cors': false
+      }
+    },
+    'GET cors_resource with credentials': {
+      // Should be same as without credentials on this route.
+      method: 'GET',
+      path: 'cors_resource',
+      withCredentials: true,
+      allowed: {
+        'origin': true,
+        'allowing': true,
+        'denying': false,
+        'free_for_all': true,
+        'no_cors': false
+      }
+    }
+  };
+
+  function logMessage(level, args) {
+    console[level].apply(console, args);
+
+    var logContainer = document.getElementById('log');
+
+    var logEntry = document.createElement('div');
+    logEntry.classList.add(level);
+
+    var i;
+    for (i = 0; i !== args.length; ++i) {
+      var partData = args[i];
+      var part = document.createElement('span');
+      var txt = document.createTextNode(partData + '');
+      part.appendChild(txt);
+      logEntry.appendChild(part);
+    }
+
+    logContainer.appendChild(logEntry);
+  }
+
+  function log() {
+    logMessage('log', arguments);
+  }
+
+  function error() {
+    logMessage('error', arguments);
+  }
+
+  // Based on an example from <http://www.html5rocks.com/en/tutorials/cors/>.
+  function createCORSRequest(method, url) {
+    var xhr = new XMLHttpRequest();
+    if ('withCredentials' in xhr) {
+      // Check if the XMLHttpRequest object has a 'withCredentials' property.
+      // 'withCredentials' only exists on XMLHTTPRequest2 objects.
+      xhr.open(method, url, true);
+
+    } else if (typeof XDomainRequest !== 'undefined') {
+      // Otherwise, check if XDomainRequest.
+      // XDomainRequest only exists in IE, and is IE's way of making CORS
+      // requests.
+      xhr = new XDomainRequest();
+      xhr.open(method, url);
+
+    } else {
+      // Otherwise, CORS is not supported by the browser.
+      xhr = null;
+    }
+    return xhr;
+  }
+
+  function runTest(testName, resourceUrl, testData, expected, onTestDone) {
+    var xhr = createCORSRequest(testData.method, resourceUrl);
+
+    function done(isResourceObtained) {
+      var result = {};
+
+      var testSucceed = (isResourceObtained === expected);
+      result.status = (testSucceed ? 'success' : 'fail');
+
+      result.data = {
+        responseType: xhr.responseType,
+        response: xhr.response,
+        status: xhr.status,
+        responseHeaders: xhr.getAllResponseHeaders()
+      };
+
+      if (!testSucceed) {
+        error('Test ' + testName + ' failed', result.data);
+      }
+
+      onTestDone(result);
+    }
+
+    if (testData.withCredentials) {
+      xhr.withCredentials = true;
+    }
+
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        done(true);
+      } else {
+        done(false);
+      }
+    };
+    xhr.onerror = function() {
+      done(false);
+    };
+
+    xhr.send();
+  }
+
+  function onTestDone(state, testName, allDoneCallback, result) {
+    state.allResults[testName] = result;
+    --state.remainingTests;
+
+    if (state.remainingTests === 0) {
+      allDoneCallback(state.allResults);
+    }
+  }
+
+  function countTestsNumber(tests) {
+    var numTests = 0;
+
+    var testName;
+    for (testName in tests) {
+      var test = tests[testName];
+
+      var serverName;
+      for (serverName in test.allowed) {
+        ++numTests;
+      }
+    }
+
+    return numTests;
+  }
+
+  function runAllTests(serversURLs, tests, doneCallback) {
+    var state = {
+      allResults: {},
+      remainingTests: 0
+    };
+
+    state.remainingTests = countTestsNumber(tests);
+
+    var testName;
+    for (testName in tests) {
+      var testData = tests[testName];
+
+      var serverName;
+      for (serverName in testData.allowed) {
+        var expected = testData.allowed[serverName];
+        var serverUrl = serversURLs[serverName];
+        console.assert(serverUrl);
+        var resourceUrl = serverUrl + testData.path;
+
+        var subTestName = testName + '[' + serverName + ']';
+
+        runTest(subTestName, resourceUrl, testData, expected,
+          onTestDone.bind(null, state, subTestName, doneCallback));
+      }
+    }
+  }
+
+  function setResults(object) {
+    var results = document.getElementById('results');
+    results.value = JSON.stringify(object, null, ' ');
+  }
+
+  function setExceptionAsResult(ex) {
+    error(ex);
+
+    setResults({
+      'status': 'error',
+      'error': ex.toString(),
+      'data': {
+        message: ex.message,
+        // Firefox-specific
+        fileName: ex.fileName,
+        lineNumber: ex.lineNumber,
+        columnNumber: ex.columnNumber,
+        stack: ex.stack,
+        // IE-specific
+        description: ex.description
+      }
+    });
+  }
+
+  function serverInputId(serverName) {
+    return 'server_' + serverName;
+  }
+
+  function formatTemplate(node, serverName) {
+    if (node.id === 'label') {
+      node.innerHTML = 'address of "' + serverName + '" server:';
+      node.removeAttribute('id');
+    }
+
+    if (node.id === 'input') {
+      node.id = serverInputId(serverName);
+    }
+
+    var i;
+    for (i = 0; i !== node.children.length; ++i) {
+      formatTemplate(node.children[i], serverName);
+    }
+  }
+
+  function createAddressInputFields() {
+    var template = document.getElementById('serverAddressTemplate');
+    var testForm = document.getElementById('testForm');
+
+    var i;
+    for (i = 0; i !== serversNames.length; ++i) {
+      var serverName = serversNames[i];
+
+      var node = template.cloneNode(true);
+      node.removeAttribute('id');
+
+      formatTemplate(node, serverName);
+
+      testForm.insertBefore(node, testForm.firstChild);
+    }
+  }
+
+  function setServerAddr(serverName, value) {
+    var input = document.getElementById(serverInputId(serverName));
+    input.value = value;
+  }
+
+  function getServerAddrOptional(serverName) {
+    var input = document.getElementById(serverInputId(serverName));
+    var addr = input.value;
+    if (!addr) {
+      return null;
+    }
+
+    if (addr[addr.length - 1] !== '/') {
+      addr += '/';
+    }
+
+    return addr;
+  }
+
+  function getServerAddr(serverName) {
+    var addr = getServerAddrOptional(serverName);
+
+    if (!addr) {
+      throw new Error(
+        'Server address for "' + serverName + '" is not specified');
+    }
+
+    return addr;
+  }
+
+  function getServersUrls() {
+    var serverUrls = {};
+
+    var i;
+    for (i = 0; i !== serversNames.length; ++i) {
+      var serverName = serversNames[i];
+      serverUrls[serverName] = getServerAddr(serverName);
+    }
+
+    return serverUrls;
+  }
+
+  function setServersUrls(serverUrls) {
+    var serverName;
+    for (serverName in serverUrls) {
+      setServerAddr(serverName, serverUrls[serverName]);
+    }
+  }
+
+  function runTests() {
+    var results = document.getElementById('results');
+
+    try {
+      var serversURLs = getServersUrls();
+      results = runAllTests(serversURLs, tests, function(results) {
+        setResults({
+          'status': 'success',
+          'data': results
+        });
+
+        var numFailed = 0;
+        var numTests = 0;
+        var failedTests = {};
+        var testName;
+        for (testName in results) {
+          ++numTests;
+          if (results[testName].status !== 'success') {
+            ++numFailed;
+            failedTests[testName] = results[testName];
+          }
+        }
+
+        if (numFailed > 0) {
+          error(
+            'Failed ' + numFailed + ' tests of ' + numTests, failedTests);
+        } else {
+          log('All ' + numTests + ' tests passed');
+        }
+      });
+    } catch(ex) {
+      setExceptionAsResult(ex);
+    }
+  }
+
+  function fillOutAddresses() {
+    var originAddr = getServerAddrOptional('origin');
+    if (!originAddr) {
+      originAddr = '/';
+    }
+    var addressesUrl = originAddr + 'servers_addresses';
+    var xhr = createCORSRequest('GET', addressesUrl);
+
+    xhr.onload = function() {
+      if (xhr.status !== 200) {
+        error(
+          '/servers_addresses request failed with status ' + xhr.status,
+          xhr.responseText);
+
+      } else {
+        log('Received server addressess:', xhr.response);
+        setServersUrls(JSON.parse(xhr.responseText));
+      }
+    };
+
+    xhr.onerror = function() {
+      error('/servers_addresses request failed');
+    };
+
+    xhr.send();
+  }
+
+  return {
+    runTests: runTests,
+    fillOutAddresses: fillOutAddresses,
+    createAddressInputFields: createAddressInputFields
+  };
+}()));
+
+(function() {
+  var cors = window.cors;
+
+  cors.createAddressInputFields();
+
+  var testForm = document.getElementById('testForm');
+  testForm.onsubmit = function() {
+    cors.runTests();
+    return false;
+  };
+
+  var fillOutButton = document.getElementById('fillOutButton');
+  fillOutButton.onclick = function() {
+    cors.fillOutAddresses();
+    return false;
+  };
+
+  cors.fillOutAddresses();
+}());
+</script>
+</body>
+</html>

@@ -1,7 +1,6 @@
 language: python
 sudo: false
 python:
-  - 3.3
   - 3.4
   - 3.5
 
@@ -15,5 +14,5 @@ script:
 
 env:
   matrix:
-    - PYTHONASYNCIODEBUG=1
-    - PYTHONASYNCIODEBUG=0
+    - PYTHONASYNCIODEBUG=nonemptystring
+    - PYTHONASYNCIODEBUG=

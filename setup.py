@@ -29,6 +29,13 @@ exec(read_file(os.path.join("src", "aiohttp_cors", "__about__.py")), about)
 needs_pytest = {'pytest', 'test'}.intersection(sys.argv)
 pytest_runner = ['pytest_runner'] if needs_pytest else []
 
+# aiohttp requires Python >= 3.4, so as aiohttp_cors.
+if sys.version_info[:2] < (3, 4):
+    print("Error: aiohttp_cors requires Python interpreter version >= 3.4, "
+          "this interpreter has version '{}'".format(sys.version),
+          file=sys.stderr)
+    sys.exit(1)
+
 
 setup(
     name=about["__title__"],
@@ -56,7 +63,7 @@ setup(
     ],
     test_suite="tests",
     install_requires=[
-        "aiohttp>=0.17.3",  # TODO: specify version that introduces signals
+        "aiohttp>=0.18.0a0",  # TODO: specify version that introduces signals
     ],
     license=about["__license__"],
     classifiers=[
@@ -64,7 +71,6 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Topic :: Software Development :: Libraries",
@@ -72,6 +78,6 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
-        "Development Status :: 4 - Beta",
+        "Development Status :: 3 - Alpha",
     ],
 )

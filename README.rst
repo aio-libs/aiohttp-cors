@@ -123,10 +123,8 @@ from git::
 
    $ pip install aiohttp_cors
 
-Note that ``aiohttp_cors`` works only with ``aiohttp`` versions greater than
-XXX.
-
-TODO: fill this specify ``aiohttp`` version
+Note that ``aiohttp_cors`` requires versions of Python >= 3.4.1 and
+``aiohttp`` >= 0.18.0.
 
 Usage
 =====

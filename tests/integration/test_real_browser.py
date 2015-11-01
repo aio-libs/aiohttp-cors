@@ -15,14 +15,17 @@
 """System test using real browser.
 """
 
+import os
 import json
 import asyncio
+import unittest
 import pathlib
 import logging
 import webbrowser
 
 from aiohttp import web, hdrs
 
+import selenium.common.exceptions
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
@@ -183,38 +186,43 @@ class IntegrationServers:
         self.servers = {}
 
 
-class TestInFirefox(AioTestBase):
-    @asynctest
+def _get_chrome_driver():
+    driver_path_env = "WEBDRIVER_CHROMEDRIVER_PATH"
+
+    if driver_path_env in os.environ:
+        driver = webdriver.Chrome(executable_path=os.environ[driver_path_env])
+    else:
+        driver = webdriver.Chrome()
+
+    return driver
+
+
+class TestInBrowser(AioTestBase):
     @asyncio.coroutine
-    def test_firefox(self):
+    def _test_in_webdriver(self, driver):
         servers = IntegrationServers()
         yield from servers.start_servers()
 
         def selenium_thread():
-            driver = webdriver.Firefox()
-            try:
-                driver.get(servers.origin_server_url)
-                assert "aiohttp_cors" in driver.title
+            driver.get(servers.origin_server_url)
+            assert "aiohttp_cors" in driver.title
 
-                wait = WebDriverWait(driver, 10)
+            wait = WebDriverWait(driver, 10)
 
-                run_button = wait.until(EC.element_to_be_clickable(
-                    (By.ID, "runTestsButton")))
+            run_button = wait.until(EC.element_to_be_clickable(
+                (By.ID, "runTestsButton")))
 
-                # Start tests
-                run_button.send_keys(Keys.RETURN)
+            # Start tests
+            run_button.send_keys(Keys.RETURN)
 
-                # Wait while test will finish
-                clear_button = wait.until(EC.element_to_be_clickable(
-                    (By.ID, "clearResultsButton")))
+            # Wait while test will finish
+            clear_button = wait.until(EC.element_to_be_clickable(
+                (By.ID, "clearResultsButton")))
 
-                # Get results json
-                results_area = driver.find_element_by_id("results")
+            # Get results json
+            results_area = driver.find_element_by_id("results")
 
-                return json.loads(results_area.get_attribute("value"))
-
-            finally:
-                driver.close()
+            return json.loads(results_area.get_attribute("value"))
 
         try:
             results = yield from self.loop.run_in_executor(
@@ -228,6 +236,32 @@ class TestInFirefox(AioTestBase):
 
         finally:
             yield from servers.stop_servers()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_firefox(self):
+        try:
+            driver = webdriver.Firefox()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver)
+        finally:
+            driver.close()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_chromium(self):
+        try:
+            driver = _get_chrome_driver()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver)
+        finally:
+            driver.close()
 
 
 def _run_integration_server():

@@ -57,6 +57,7 @@ setup(
         "pytest-cov",
         "pytest-flakes",
         "pytest-pylint",
+        "selenium",
     ],
     test_suite="tests",
     install_requires=[

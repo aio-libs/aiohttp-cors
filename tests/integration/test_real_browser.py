@@ -23,9 +23,15 @@ import webbrowser
 
 from aiohttp import web, hdrs
 
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+
 from aiohttp_cors import setup, ResourceOptions
 
-from ..aio_test_base import create_server
+from ..aio_test_base import create_server, AioTestBase, asynctest
 
 
 class _ServerDescr:
@@ -175,6 +181,53 @@ class IntegrationServers:
             yield from server_descr.app.finish()
 
         self.servers = {}
+
+
+class TestInFirefox(AioTestBase):
+    @asynctest
+    @asyncio.coroutine
+    def test_firefox(self):
+        servers = IntegrationServers()
+        yield from servers.start_servers()
+
+        def selenium_thread():
+            driver = webdriver.Firefox()
+            try:
+                driver.get(servers.origin_server_url)
+                assert "aiohttp_cors" in driver.title
+
+                wait = WebDriverWait(driver, 10)
+
+                run_button = wait.until(EC.element_to_be_clickable(
+                    (By.ID, "runTestsButton")))
+
+                # Start tests
+                run_button.send_keys(Keys.RETURN)
+
+                # Wait while test will finish
+                clear_button = wait.until(EC.element_to_be_clickable(
+                    (By.ID, "clearResultsButton")))
+
+                # Get results json
+                results_area = driver.find_element_by_id("results")
+
+                return json.loads(results_area.get_attribute("value"))
+
+            finally:
+                driver.close()
+
+        try:
+            results = yield from self.loop.run_in_executor(
+                self.thread_pool_executor, selenium_thread)
+
+            self.assertEqual(results["status"], "success")
+            for test_name, test_data in results["data"].items():
+                with self.subTest(group_name=test_name):
+                    self.assertEqual(test_data["status"], "success",
+                                     msg=(test_name, test_data))
+
+        finally:
+            yield from servers.stop_servers()
 
 
 def _run_integration_server():

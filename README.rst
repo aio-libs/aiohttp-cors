@@ -265,6 +265,22 @@ Security
 
 TODO: fill this
 
+Development
+===========
+
+TODO:
+
+To run run Selenium tests with Firefox web driver you need to install Firefox.
+
+To run run Selenium tests with Chromium web driver you need to:
+
+1. Install Chrome driver. On Ubuntu 14.04 it's in ``chromium-chromedriver`` package.
+
+2. Either add ``chromedriver`` to PATH or set ``WEBDRIVER_CHROMEDRIVER_PATH``
+environment variable to ``chromedriver``, e.g. on Ubuntu 14.04
+``WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver``
+
+
 License
 =======
 

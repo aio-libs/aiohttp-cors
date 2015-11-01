@@ -178,7 +178,7 @@ class IntegrationServers:
         self.servers = {}
 
 
-def run_integration_server():
+def _run_integration_server():
     """Runs integration server for interactive debugging."""
 
     logging.basicConfig(level=logging.INFO)
@@ -209,4 +209,4 @@ if __name__ == "__main__":
     # This module can be run in the following way:
     #     $ python -m tests.integration.test_real_browser
     # from aiohttp_cors root directory.
-    run_integration_server()
+    _run_integration_server()

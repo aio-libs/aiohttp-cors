@@ -17,7 +17,6 @@
 
 import json
 import asyncio
-import unittest
 import pathlib
 import logging
 import webbrowser

@@ -19,6 +19,7 @@ import unittest
 import asyncio
 import socket
 import functools
+import concurrent.futures
 
 
 @asyncio.coroutine
@@ -41,10 +42,13 @@ class AioTestBase(unittest.TestCase):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
+        self.thread_pool_executor = concurrent.futures.ThreadPoolExecutor(4)
+
     def tearDown(self):
+        self.thread_pool_executor.shutdown()
+
         self.loop.close()
         asyncio.set_event_loop(None)
-
 
 def asynctest(test_method):
     """Decorator for coroutine tests.

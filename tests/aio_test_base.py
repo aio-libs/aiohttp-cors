@@ -46,7 +46,7 @@ class AioTestBase(unittest.TestCase):
         asyncio.set_event_loop(None)
 
 
-def async_test(test_method):
+def asynctest(test_method):
     """Decorator for coroutine tests.
 
     To be used with `AioTestBase`-based tests"""

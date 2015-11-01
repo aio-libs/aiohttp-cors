@@ -17,7 +17,7 @@
 
 import asyncio
 
-from tests.aio_test_base import AioTestBase, create_server, async_test
+from tests.aio_test_base import AioTestBase, create_server, asynctest
 
 import aiohttp
 from aiohttp import web
@@ -103,7 +103,7 @@ class AioAiohttpAppTestBase(AioTestBase):
 class TestMain(AioAiohttpAppTestBase):
     """Tests CORS server by issuing CORS requests."""
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_message_roundtrip(self):
         """Test that aiohttp server is correctly setup in the base class."""
@@ -120,7 +120,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         self.assertEqual(data, TEST_BODY)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_dummy_setup(self):
         """Test a dummy configuration."""
@@ -129,7 +129,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_dummy_setup_roundtrip(self):
         """Test a dummy configuration with a message round-trip."""
@@ -190,7 +190,7 @@ class TestMain(AioAiohttpAppTestBase):
                 finally:
                     yield from self.shutdown_server()
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_simple_default(self):
         """Test CORS simple requests with a route with the default
@@ -279,7 +279,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self._run_simple_requests_tests(tests_descriptions)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_simple_with_credentials(self):
         """Test CORS simple requests with a route with enabled authorization.
@@ -350,7 +350,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self._run_simple_requests_tests(tests_descriptions)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_simple_expose_headers(self):
         """Test CORS simple requests with a route that exposes header."""
@@ -454,7 +454,7 @@ class TestMain(AioAiohttpAppTestBase):
                 finally:
                     yield from self.shutdown_server()
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_preflight_default(self):
         """Test CORS preflight requests with a route with the default

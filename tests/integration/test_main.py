@@ -566,6 +566,38 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self._run_preflight_requests_tests(tests_descriptions)
 
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_multiple_routers_with_one_options(self):
+        """Test CORS preflight handling on resource that is available through
+        several routes.
+        """
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+        })
+
+        cors.add(app.router.add_route("GET", "/{name}", handler))
+        cors.add(app.router.add_route("PUT", "/{name}", handler))
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url + "user",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+            }
+        )
+        self.assertEqual(response.status, 200)
+
+        data = yield from response.text()
+        self.assertEqual(data, "")
+
 
 # TODO: test requesting resources with not configured CORS.
 # TODO: test wildcard origin in default config.

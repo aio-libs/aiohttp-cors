@@ -118,7 +118,7 @@ does actual request.
 Installation
 ============
 
-You can install ``aiohttp_cors`` as typical Python library from PyPI or
+You can install ``aiohttp_cors`` as a typical Python library from PyPI or
 from git::
 
    $ pip install aiohttp_cors

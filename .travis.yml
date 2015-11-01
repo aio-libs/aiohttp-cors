@@ -14,5 +14,7 @@ script:
 
 env:
   matrix:
-    - PYTHONASYNCIODEBUG=nonemptystring
+    # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
+    # is any non empty string.
+    - PYTHONASYNCIODEBUG=X
     - PYTHONASYNCIODEBUG=

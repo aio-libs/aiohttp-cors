@@ -38,7 +38,8 @@
   <form name="test" id="testForm">
     <div>
       <input id="fillOutButton" value="Fill out addresses" type="button">
-      <input value="Run tests" type="submit">
+      <input id="runTestsButton" value="Run tests" type="submit" disabled>
+      <input id="clearResultsButton" value="Clear results" type="button" disabled>
     </div>
   </form>
   <div id="log" class="log">
@@ -352,6 +353,8 @@
   }
 
   function runTests() {
+    setTestingStarted();
+
     var results = document.getElementById('results');
 
     try {
@@ -380,13 +383,15 @@
         } else {
           log('All ' + numTests + ' tests passed');
         }
+
+        setTestingFinished();
       });
     } catch(ex) {
       setExceptionAsResult(ex);
     }
   }
 
-  function fillOutAddresses() {
+  function fillOutAddresses(callback) {
     var originAddr = getServerAddrOptional('origin');
     if (!originAddr) {
       originAddr = '/';
@@ -404,6 +409,10 @@
         log('Received server addressess:', xhr.response);
         setServersUrls(JSON.parse(xhr.responseText));
       }
+
+      if (typeof callback !== 'undefined') {
+        callback();
+      }
     };
 
     xhr.onerror = function() {
@@ -413,10 +422,30 @@
     xhr.send();
   }
 
+  function setReadyToStartTesting() {
+    var runButton = document.getElementById('runTestsButton');
+    runButton.disabled = false;
+  }
+
+  function setTestingStarted() {
+    var runButton = document.getElementById('runTestsButton');
+    var clearButton = document.getElementById('clearResultsButton');
+    runButton.disabled = true;
+    clearButton.disabled = true;
+  }
+
+  function setTestingFinished() {
+    var runButton = document.getElementById('runTestsButton');
+    var clearButton = document.getElementById('clearResultsButton');
+    runButton.disabled = false;
+    clearButton.disabled = false;
+  }
+
   return {
     runTests: runTests,
     fillOutAddresses: fillOutAddresses,
-    createAddressInputFields: createAddressInputFields
+    createAddressInputFields: createAddressInputFields,
+    setReadyToStartTesting: setReadyToStartTesting
   };
 }()));
 
@@ -437,7 +466,7 @@
     return false;
   };
 
-  cors.fillOutAddresses();
+  cors.fillOutAddresses(cors.setReadyToStartTesting);
 }());
 </script>
 </body>

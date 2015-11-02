@@ -17,7 +17,7 @@
 
 import asyncio
 
-from tests.aio_test_base import AioTestBase, create_server, async_test
+from tests.aio_test_base import AioTestBase, create_server, asynctest
 
 import aiohttp
 from aiohttp import web
@@ -103,7 +103,7 @@ class AioAiohttpAppTestBase(AioTestBase):
 class TestMain(AioAiohttpAppTestBase):
     """Tests CORS server by issuing CORS requests."""
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_message_roundtrip(self):
         """Test that aiohttp server is correctly setup in the base class."""
@@ -120,7 +120,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         self.assertEqual(data, TEST_BODY)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_dummy_setup(self):
         """Test a dummy configuration."""
@@ -129,7 +129,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_dummy_setup_roundtrip(self):
         """Test a dummy configuration with a message round-trip."""
@@ -190,7 +190,7 @@ class TestMain(AioAiohttpAppTestBase):
                 finally:
                     yield from self.shutdown_server()
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_simple_default(self):
         """Test CORS simple requests with a route with the default
@@ -279,7 +279,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self._run_simple_requests_tests(tests_descriptions)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_simple_with_credentials(self):
         """Test CORS simple requests with a route with enabled authorization.
@@ -350,7 +350,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self._run_simple_requests_tests(tests_descriptions)
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_simple_expose_headers(self):
         """Test CORS simple requests with a route that exposes header."""
@@ -454,7 +454,7 @@ class TestMain(AioAiohttpAppTestBase):
                 finally:
                     yield from self.shutdown_server()
 
-    @async_test
+    @asynctest
     @asyncio.coroutine
     def test_preflight_default(self):
         """Test CORS preflight requests with a route with the default
@@ -565,6 +565,38 @@ class TestMain(AioAiohttpAppTestBase):
         ]
 
         yield from self._run_preflight_requests_tests(tests_descriptions)
+
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_multiple_routers_with_one_options(self):
+        """Test CORS preflight handling on resource that is available through
+        several routes.
+        """
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+        })
+
+        cors.add(app.router.add_route("GET", "/{name}", handler))
+        cors.add(app.router.add_route("PUT", "/{name}", handler))
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url + "user",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+            }
+        )
+        self.assertEqual(response.status, 200)
+
+        data = yield from response.text()
+        self.assertEqual(data, "")
 
 
 # TODO: test requesting resources with not configured CORS.

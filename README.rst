@@ -118,15 +118,13 @@ does actual request.
 Installation
 ============
 
-You can install ``aiohttp_cors`` as typical Python library from PyPI or
+You can install ``aiohttp_cors`` as a typical Python library from PyPI or
 from git::
 
    $ pip install aiohttp_cors
 
-Note that ``aiohttp_cors`` works only with ``aiohttp`` versions greater than
-XXX.
-
-TODO: fill this specify ``aiohttp`` version
+Note that ``aiohttp_cors`` requires versions of Python >= 3.4.1 and
+``aiohttp`` >= 0.18.0.
 
 Usage
 =====
@@ -264,6 +262,23 @@ Security
 ========
 
 TODO: fill this
+
+Development
+===========
+
+TODO:
+
+To run run Selenium tests with Firefox web driver you need to install Firefox.
+
+To run run Selenium tests with Chromium web driver you need to:
+
+1. Install Chrome driver. On Ubuntu 14.04 it's in ``chromium-chromedriver``
+   package.
+
+2. Either add ``chromedriver`` to PATH or set ``WEBDRIVER_CHROMEDRIVER_PATH``
+   environment variable to ``chromedriver``, e.g. on Ubuntu 14.04
+   ``WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver``.
+
 
 License
 =======

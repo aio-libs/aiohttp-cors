@@ -15,6 +15,7 @@
 """System test using real browser.
 """
 
+import os
 import json
 import asyncio
 import unittest
@@ -24,9 +25,16 @@ import webbrowser
 
 from aiohttp import web, hdrs
 
+import selenium.common.exceptions
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+
 from aiohttp_cors import setup, ResourceOptions
 
-from ..aio_test_base import create_server
+from ..aio_test_base import create_server, AioTestBase, asynctest
 
 
 class _ServerDescr:
@@ -178,7 +186,85 @@ class IntegrationServers:
         self.servers = {}
 
 
-def run_integration_server():
+def _get_chrome_driver():
+    driver_path_env = "WEBDRIVER_CHROMEDRIVER_PATH"
+
+    if driver_path_env in os.environ:
+        driver = webdriver.Chrome(executable_path=os.environ[driver_path_env])
+    else:
+        driver = webdriver.Chrome()
+
+    return driver
+
+
+class TestInBrowser(AioTestBase):
+    @asyncio.coroutine
+    def _test_in_webdriver(self, driver):
+        servers = IntegrationServers()
+        yield from servers.start_servers()
+
+        def selenium_thread():
+            driver.get(servers.origin_server_url)
+            assert "aiohttp_cors" in driver.title
+
+            wait = WebDriverWait(driver, 10)
+
+            run_button = wait.until(EC.element_to_be_clickable(
+                (By.ID, "runTestsButton")))
+
+            # Start tests
+            run_button.send_keys(Keys.RETURN)
+
+            # Wait while test will finish
+            clear_button = wait.until(EC.element_to_be_clickable(
+                (By.ID, "clearResultsButton")))
+
+            # Get results json
+            results_area = driver.find_element_by_id("results")
+
+            return json.loads(results_area.get_attribute("value"))
+
+        try:
+            results = yield from self.loop.run_in_executor(
+                self.thread_pool_executor, selenium_thread)
+
+            self.assertEqual(results["status"], "success")
+            for test_name, test_data in results["data"].items():
+                with self.subTest(group_name=test_name):
+                    self.assertEqual(test_data["status"], "success",
+                                     msg=(test_name, test_data))
+
+        finally:
+            yield from servers.stop_servers()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_firefox(self):
+        try:
+            driver = webdriver.Firefox()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver)
+        finally:
+            driver.close()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_chromium(self):
+        try:
+            driver = _get_chrome_driver()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver)
+        finally:
+            driver.close()
+
+
+def _run_integration_server():
     """Runs integration server for interactive debugging."""
 
     logging.basicConfig(level=logging.INFO)
@@ -209,4 +295,4 @@ if __name__ == "__main__":
     # This module can be run in the following way:
     #     $ python -m tests.integration.test_real_browser
     # from aiohttp_cors root directory.
-    run_integration_server()
+    _run_integration_server()

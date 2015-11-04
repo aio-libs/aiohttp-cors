@@ -18,6 +18,7 @@
 import asyncio
 import collections
 import collections.abc
+from typing import Mapping, Union, Any
 
 from aiohttp import web, hdrs
 
@@ -52,7 +53,8 @@ _SIMPLE_RESPONSE_HEADERS = frozenset([
 ])
 
 
-def _parse_config_options(config: collections.abc.Mapping=None):
+def _parse_config_options(
+        config: Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]=None):
     """Parse CORS configuration (default or per-route)
 
     :param config:
@@ -116,7 +118,8 @@ class CorsConfig:
     """
 
     def __init__(self, app: web.Application, *,
-                 defaults: dict=None,
+                 defaults: Mapping[str, Union[ResourceOptions,
+                                              Mapping[str, Any]]]=None,
                  router_adapter: RouterAdapter=None):
         """Construct CORS configuration.
 
@@ -150,7 +153,10 @@ class CorsConfig:
 
         self._app.on_response_prepare.append(self._on_response_prepare)
 
-    def add(self, route, config: collections.abc.Mapping=None):
+    def add(self,
+            route,
+            config: Mapping[str, Union[ResourceOptions,
+                                       Mapping[str, Any]]]=None):
         """Enable CORS for specific route.
 
         CORS is enable **only** for routes added with this method.
@@ -392,7 +398,9 @@ class CorsConfig:
         return response
 
 
-def setup(app: web.Application, *, defaults: dict=None) -> CorsConfig:
+def setup(app: web.Application, *,
+          defaults: Mapping[str, Union[ResourceOptions,
+                                       Mapping[str, Any]]]=None) -> CorsConfig:
     """Setup CORS processing for the application.
 
     To enable CORS for a resource you need to explicitly add route for

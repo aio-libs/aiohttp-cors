@@ -146,7 +146,7 @@ class CorsConfig:
         self._route_config = {}
         self._preflight_route_settings = {}
 
-        self._app.on_response_prepare.append(self.on_response_prepare)
+        self._app.on_response_prepare.append(self._on_response_prepare)
 
     def add(self, route, config: collections.abc.Mapping=None):
         """Enable CORS for specific route.
@@ -189,9 +189,9 @@ class CorsConfig:
         return route
 
     @asyncio.coroutine
-    def on_response_prepare(self,
-                            request: web.Request,
-                            response: web.StreamResponse):
+    def _on_response_prepare(self,
+                             request: web.Request,
+                             response: web.StreamResponse):
         """(Potentially) simple CORS request response processor.
 
         If request is done on CORS-enabled route, process request parameters

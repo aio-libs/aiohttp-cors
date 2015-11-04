@@ -182,7 +182,7 @@ class CorsConfig:
 
         # Add preflight request handler
         preflight_route = self._router_adapter.add_options_method_handler(
-            route, self.preflight_handler)
+            route, self._preflight_handler)
 
         assert preflight_route not in self._preflight_route_settings
         self._preflight_route_settings[preflight_route] = \
@@ -276,7 +276,7 @@ class CorsConfig:
         return frozenset(filter(None, headers))
 
     @asyncio.coroutine
-    def preflight_handler(self, request: web.Request):
+    def _preflight_handler(self, request: web.Request):
         """CORS preflight request handler"""
         route = request.match_info.route
         config, allowed_methods = self._preflight_route_settings[route]

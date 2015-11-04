@@ -172,9 +172,10 @@ class CorsConfig:
 
         route_methods = frozenset(self._router_adapter.route_methods(route))
 
-        # TODO
-        assert not {hdrs.METH_OPTIONS, hdrs.METH_ANY}.intersection(
-            route_methods)
+        # TODO: Limited handling of CORS on OPTIONS may be useful?
+        if {hdrs.METH_ANY, hdrs.METH_OPTIONS}.intersection(route_methods):
+            raise ValueError(
+                "CORS can't be enabled on route that handles OPTIONS request.")
 
         assert route not in self._route_config
         self._route_config[route] = defaulted_config

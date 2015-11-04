@@ -16,26 +16,24 @@
 """
 
 import numbers
+import collections
 import collections.abc
 
 __all__ = ("ResourceOptions",)
 
 
-class ResourceOptions:
-    """Resource CORS options.
+class ResourceOptions(collections.namedtuple(
+        "Base",
+        ("allow_credentials", "expose_headers", "allow_headers", "max_age"))):
+    """Resource CORS options."""
 
-    Resource is already bound to specific path and HTTP method.
-
-    The options accessors are part of the private interface and optimized for
-    faster request processing.
-    """
-
-    __slots__ = (
-        "_allow_credentials", "_expose_headers", "_allow_headers", "_max_age")
+    __slots__ = ()
 
     def __init__(self, *, allow_credentials=False, expose_headers=(),
                  allow_headers=(), max_age=None):
         """Construct resource CORS options.
+
+        Options will be normalized.
 
         :param allow_credentials:
             Is passing client credentials to the resource from other origin
@@ -43,6 +41,8 @@ class ResourceOptions:
             See <http://www.w3.org/TR/cors/#user-credentials> for
             the definition.
         :type allow_credentials: bool
+            Is passing client credentials to the resource from other origin
+            is allowed.
         :param expose_headers:
             Server headers that are allowed to be exposed to the client.
             Simple response headers are excluded from this set, see
@@ -57,19 +57,22 @@ class ResourceOptions:
             preflight result cache (in seconds).
             See <http://www.w3.org/TR/cors/#http-access-control-max-age>.
         """
-        # TODO: storing precomputed values looks like premature optimization.
-        # Benchmarks should be done, maybe this optimization not worth it.
+        super().__init__()
+
+    def __new__(cls, *, allow_credentials=False, expose_headers=(),
+                allow_headers=(), max_age=None):
+        """Normalize source parameters and store them in namedtuple."""
 
         if not isinstance(allow_credentials, bool):
             raise ValueError(
                 "'allow_credentials' must be boolean, "
                 "got '{}'".format(allow_credentials))
-        self._allow_credentials = allow_credentials
+        _allow_credentials = allow_credentials
 
         # `expose_headers` is either "*", or string with comma separated
         # headers.
         if expose_headers == "*":
-            self._expose_headers = expose_headers
+            _expose_headers = expose_headers
         elif (not isinstance(expose_headers, collections.abc.Sequence) or
               isinstance(expose_headers, str)):
             raise ValueError(
@@ -81,65 +84,34 @@ class ResourceOptions:
             # TODO: Remove headers that in the _SIMPLE_RESPONSE_HEADERS set
             # according to
             # <http://www.w3.org/TR/cors/#list-of-exposed-headers>.
-            self._expose_headers = ",".join(expose_headers)
+            _expose_headers = frozenset(expose_headers)
         else:
-            self._expose_headers = None
+            _expose_headers = frozenset()
 
         # `allow_headers` is either "*", or set of headers in upper case.
         if allow_headers == "*":
-            self._allow_headers = allow_headers
-        elif (not isinstance(expose_headers, collections.abc.Sequence) or
-              isinstance(expose_headers, str)):
+            _allow_headers = allow_headers
+        elif (not isinstance(allow_headers, collections.abc.Sequence) or
+              isinstance(allow_headers, str)):
             raise ValueError(
                 "'allow_headers' must be either '*', or sequence of strings, "
                 "got '{}'".format(allow_headers))
         else:
             # TODO: Check that headers are valid.
-            self._allow_headers = frozenset(h.upper() for h in allow_headers)
+            _allow_headers = frozenset(h.upper() for h in allow_headers)
 
         if max_age is None:
-            self._max_age = None
+            _max_age = None
         else:
             if not isinstance(max_age, numbers.Integral) or max_age < 0:
                 raise ValueError(
                     "'max_age' must be non-negative integer, "
                     "got '{}'".format(max_age))
-            self._max_age = str(max_age)
+            _max_age = max_age
 
-    @property
-    def allow_credentials(self):
-        """Is passing client credentials to the resource from other origin
-        is allowed.
-
-        :rtype: bool
-        """
-        return self._allow_credentials
-
-    @property
-    def expose_headers(self):
-        """Server headers that are allowed to be exposed to the client.
-
-        :returns:
-            Non-empty string with comma-separated header names,
-            or "*", or None.
-        """
-        return self._expose_headers
-
-    @property
-    def allow_headers(self):
-        """Client headers that are allowed to be passed to the resource.
-
-        :returns:
-            "*", or set of uppercase strings.
-        """
-        return self._allow_headers
-
-    @property
-    def max_age(self):
-        """How long a client can cache a preflight response for the resource.
-
-        :returns:
-            string representation of MaxAge.
-        :rtype: str
-        """
-        return self._max_age
+        return super().__new__(
+            cls,
+            allow_credentials=_allow_credentials,
+            expose_headers=_expose_headers,
+            allow_headers=_allow_headers,
+            max_age=_max_age)

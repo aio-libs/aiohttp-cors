@@ -233,7 +233,7 @@ class CorsConfig:
         elif options.expose_headers:
             # Expose predefined list of headers.
             response.headers[hdrs.ACCESS_CONTROL_EXPOSE_HEADERS] = \
-                options.expose_headers
+                ",".join(options.expose_headers)
 
         # Process according to CORS 6.1.3.
         # Set allowed origin.
@@ -343,7 +343,8 @@ class CorsConfig:
 
         # CORS 6.2.8
         if options.max_age is not None:
-            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = options.max_age
+            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = \
+                str(options.max_age)
 
         # CORS 6.2.9
         # TODO: more optimal for client preflight request cache would be to

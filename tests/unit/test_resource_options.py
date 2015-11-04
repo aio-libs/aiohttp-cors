@@ -32,4 +32,12 @@ class TestResourceOptions(unittest.TestCase):
         self.assertFalse(opts.allow_headers)
         self.assertIsNone(opts.max_age)
 
+    def test_comparison(self):
+        self.assertTrue(ResourceOptions() == ResourceOptions())
+        self.assertFalse(ResourceOptions() != ResourceOptions())
+        self.assertFalse(
+            ResourceOptions(allow_credentials=True) == ResourceOptions())
+        self.assertTrue(
+            ResourceOptions(allow_credentials=True) != ResourceOptions())
+
 # TODO: test arguments parsing

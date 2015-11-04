@@ -598,6 +598,72 @@ class TestMain(AioAiohttpAppTestBase):
         data = yield from response.text()
         self.assertEqual(data, "")
 
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_headers(self):
+        """Test CORS preflight request handlers handling."""
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers=("Content-Type", "X-Header"),
+            )
+        })
+
+        cors.add(app.router.add_route("PUT", "/", handler))
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+            }
+        )
+        self.assertEqual(response.status, 200)
+        # Access-Control-Allow-Headers must be compared in case-insensitive
+        # way.
+        self.assertEqual(
+            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
+            "content-type".upper())
+        self.assertEqual((yield from response.text()), "")
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
+            }
+        )
+        self.assertEqual(response.status, 200)
+        # Access-Control-Allow-Headers must be compared in case-insensitive
+        # way.
+        self.assertEqual(
+            frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
+                      .upper().split(",")),
+            {"X-Header".upper(), "content-type".upper()})
+        self.assertEqual((yield from response.text()), "")
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
+            }
+        )
+        self.assertEqual(response.status, 403)
+        self.assertNotIn(
+            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+            response.headers)
+        self.assertIn(
+            "headers are not allowed: TEST",
+            (yield from response.text()))
+
 
 # TODO: test requesting resources with not configured CORS.
 # TODO: test wildcard origin in default config.

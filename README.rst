@@ -119,9 +119,11 @@ Installation
 ============
 
 You can install ``aiohttp_cors`` as a typical Python library from PyPI or
-from git::
+from git:
 
-   $ pip install aiohttp_cors
+.. code-block:: bash
+
+    $ pip install aiohttp_cors
 
 Note that ``aiohttp_cors`` requires versions of Python >= 3.4.1 and
 ``aiohttp`` >= 0.18.0.
@@ -130,7 +132,9 @@ Usage
 =====
 
 To use ``aiohttp_cors`` you need to configure the application and
-enable CORS on routes of resources that you want to expose::
+enable CORS on routes of resources that you want to expose:
+
+.. code-block:: python
 
     import asyncio
     from aiohttp import web
@@ -186,7 +190,9 @@ and HTTP method ``GET``, and in the context of CORS:
   seconds.
 
 Resource will be available only to the explicitly specified origins.
-You can specify "all other origins" using special ``*`` origin::
+You can specify "all other origins" using special ``*`` origin:
+
+.. code-block:: python
 
     cors.add(route, {
             "*":
@@ -206,7 +212,9 @@ but client will not be allowed to send either credentials,
 or send non-simple headers, or read from server non-simple headers.
 
 To enable sending or receiving all headers you can specify special value
-``*`` instead of sequence of headers::
+``*`` instead of sequence of headers:
+
+.. code-block:: python
 
     cors.add(route, {
             "http://client.example.org":
@@ -216,7 +224,9 @@ To enable sending or receiving all headers you can specify special value
         })
 
 You can specify default CORS-enabled resource options using
-``aiohttp_cors.setup()``'s ``defaults`` argument::
+``aiohttp_cors.setup()``'s ``defaults`` argument:
+
+.. code-block:: python
 
     cors = aiohttp_cors.setup(app, defaults={
             # Allow all to read all CORS-enabled resources from
@@ -242,7 +252,9 @@ You can specify default CORS-enabled resource options using
     app.router.add_route("GET", "/private", handler))
 
 Here is an example of how to enable CORS for all origins with all CORS
-features::
+features:
+
+.. code-block:: python
 
     cors = aiohttp_cors.setup(app, defaults={
         "*": aiohttp_cors.ResourceOptions(

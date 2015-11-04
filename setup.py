@@ -50,6 +50,12 @@ setup(
     )),
     packages=find_packages(),
     setup_requires=[
+        # Setuptools fixed environment markers (":python_version < '3.5'")
+        # in 17.1, and pip in 6.
+        # TODO: Doesn't work due to
+        # <https://bitbucket.org/pypa/setuptools/issues/141/setup_requires-feature-does-not-handle>
+        # "pip>=6",
+        # "setuptools>=17.1",
     ] + pytest_runner,
     tests_require=[
         "pytest",
@@ -63,6 +69,12 @@ setup(
     install_requires=[
         "aiohttp>=0.18.0",
     ],
+    extras_require={
+        # TODO: Rich comparison in environment markers are broken in
+        # setuptools<17.1 and pip<6.
+        # ":python_version < '3.5'": ["typing"],
+        ":python_version == '3.4'": ["typing"],
+    },
     license=about["__license__"],
     classifiers=[
         "License :: OSI Approved :: Apache Software License",

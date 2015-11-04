@@ -144,9 +144,11 @@ class CorsConfig:
         self._default_config = _parse_config_options(defaults)
 
         self._route_config = {}
-        self._preflight_route_settings = {}
+        # Preflight handlers stored in order in which routes were configured
+        # with CORS (order of "cors.add(...)" calls).
+        self._preflight_route_settings = collections.OrderedDict()
 
-        self._app.on_response_prepare.append(self.on_response_prepare)
+        self._app.on_response_prepare.append(self._on_response_prepare)
 
     def add(self, route, config: collections.abc.Mapping=None):
         """Enable CORS for specific route.
@@ -172,15 +174,17 @@ class CorsConfig:
 
         route_methods = frozenset(self._router_adapter.route_methods(route))
 
-        # TODO
-        assert "OPTIONS" not in route_methods
+        # TODO: Limited handling of CORS on OPTIONS may be useful?
+        if {hdrs.METH_ANY, hdrs.METH_OPTIONS}.intersection(route_methods):
+            raise ValueError(
+                "CORS can't be enabled on route that handles OPTIONS request.")
 
         assert route not in self._route_config
         self._route_config[route] = defaulted_config
 
         # Add preflight request handler
         preflight_route = self._router_adapter.add_options_method_handler(
-            route, self.preflight_handler)
+            route, self._preflight_handler)
 
         assert preflight_route not in self._preflight_route_settings
         self._preflight_route_settings[preflight_route] = \
@@ -189,9 +193,9 @@ class CorsConfig:
         return route
 
     @asyncio.coroutine
-    def on_response_prepare(self,
-                            request: web.Request,
-                            response: web.StreamResponse):
+    def _on_response_prepare(self,
+                             request: web.Request,
+                             response: web.StreamResponse):
         """(Potentially) simple CORS request response processor.
 
         If request is done on CORS-enabled route, process request parameters
@@ -231,7 +235,7 @@ class CorsConfig:
         elif options.expose_headers:
             # Expose predefined list of headers.
             response.headers[hdrs.ACCESS_CONTROL_EXPOSE_HEADERS] = \
-                options.expose_headers
+                ",".join(options.expose_headers)
 
         # Process according to CORS 6.1.3.
         # Set allowed origin.
@@ -274,10 +278,36 @@ class CorsConfig:
         return frozenset(filter(None, headers))
 
     @asyncio.coroutine
-    def preflight_handler(self, request: web.Request):
+    def _preflight_handler(self, request: web.Request):
         """CORS preflight request handler"""
-        route = request.match_info.route
-        config, allowed_methods = self._preflight_route_settings[route]
+
+        # Single path can be handled by multiple routes with different
+        # methods, e.g.:
+        #     GET /user/1
+        #     POST /user/1
+        #     DELETE /user/1
+        # In this case several OPTIONS CORS handlers are configured for the
+        # path, but aiohttp resolves all OPTIONS query to the first handler.
+        # Gather all routes that corresponds to the current request path.
+
+        # TODO: Test difference between request.raw_path and request.path.
+        path = request.raw_path
+        preflight_routes = [
+            route for route in self._preflight_route_settings.keys() if
+            route.match(path) is not None]
+        method_to_config = {}
+        for route in preflight_routes:
+            config, methods = self._preflight_route_settings[route]
+            for method in methods:
+                if method in method_to_config:
+                    if config != method_to_config[method]:
+                        # TODO: Catch logged errors in tests.
+                        _logger.error(
+                            "Path '{path}' matches several CORS handlers with "
+                            "different configuration. Using first matched "
+                            "configuration.".format(
+                                path=path))
+                method_to_config[method] = config
 
         # Handle according to part 6.2 of the CORS specification.
 
@@ -287,6 +317,18 @@ class CorsConfig:
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "
                      "origin header is not specified in the request")
+
+        # CORS 6.2.3. Doing it out of order is not an error.
+        request_method = self._parse_request_method(request)
+
+        # CORS 6.2.5. Doing it out of order is not an error.
+        if request_method not in method_to_config:
+            raise web.HTTPForbidden(
+                text="CORS preflight request failed: "
+                     "request method '{}' is not allowed".format(
+                         request_method))
+
+        config = method_to_config[request_method]
 
         if not config:
             # No allowed origins for the route.
@@ -303,18 +345,8 @@ class CorsConfig:
                 text="CORS preflight request failed: "
                      "origin '{}' is not allowed".format(origin))
 
-        # CORS 6.2.3
-        request_method = self._parse_request_method(request)
-
         # CORS 6.2.4
         request_headers = self._parse_request_headers(request)
-
-        # CORS 6.2.5
-        if request_method not in allowed_methods:
-            raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "request method '{}' is not allowed".format(
-                         request_method))
 
         # CORS 6.2.6
         if options.allow_headers == "*":
@@ -341,7 +373,8 @@ class CorsConfig:
 
         # CORS 6.2.8
         if options.max_age is not None:
-            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = options.max_age
+            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = \
+                str(options.max_age)
 
         # CORS 6.2.9
         # TODO: more optimal for client preflight request cache would be to

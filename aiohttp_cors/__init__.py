@@ -173,7 +173,7 @@ class CorsConfig:
         route_methods = frozenset(self._router_adapter.route_methods(route))
 
         # TODO
-        assert "OPTIONS" not in route_methods
+        assert hdrs.METH_OPTIONS not in route_methods
 
         assert route not in self._route_config
         self._route_config[route] = defaulted_config

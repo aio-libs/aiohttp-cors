@@ -28,7 +28,7 @@ from .__about__ import (
 )
 from .urldispatcher_router_adapter import UrlDistatcherRouterAdapter
 from .router_adapter import RouterAdapter
-from .log import logger as _logger
+from ._log import logger as _logger
 from .resource_options import ResourceOptions
 
 __all__ = (

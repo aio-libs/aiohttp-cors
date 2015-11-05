@@ -165,6 +165,7 @@ class CorsConfig:
             Route for which CORS will be enabled.
         :param config:
             CORS options for the route.
+        :return: ``route``.
         """
         if config is None and not self._default_config:
             _logger.warning(

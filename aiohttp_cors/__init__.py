@@ -167,6 +167,14 @@ class CorsConfig:
             CORS options for the route.
         :return: ``route``.
         """
+
+        if route in self._preflight_route_settings:
+            _logger.warning(
+                "Trying to configure CORS for internal CORS handler route. "
+                "Ignoring:\n"
+                "{!r}".format(route))
+            return route
+
         if config is None and not self._default_config:
             _logger.warning(
                 "No allowed origins configured for route %s, "

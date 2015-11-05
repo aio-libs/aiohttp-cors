@@ -192,7 +192,8 @@ class CorsConfig:
         # TODO: Limited handling of CORS on OPTIONS may be useful?
         if {hdrs.METH_ANY, hdrs.METH_OPTIONS}.intersection(route_methods):
             raise ValueError(
-                "CORS can't be enabled on route that handles OPTIONS request:\n"
+                "CORS can't be enabled on route that handles OPTIONS "
+                "request:\n"
                 "{!r}".format(route))
 
         assert route not in self._route_config

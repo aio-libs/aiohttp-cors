@@ -14,7 +14,7 @@
 
 import os
 import sys
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def read_file(filename):
@@ -48,7 +48,7 @@ setup(
         read_file("README.rst"),
         read_file("CHANGES.rst"),
     )),
-    packages=find_packages(),
+    packages=["aiohttp_cors"],
     setup_requires=[
         # Setuptools fixed environment markers (":python_version < '3.5'")
         # in 17.1, and pip in 6.

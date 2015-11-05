@@ -270,6 +270,31 @@ features:
     cors.add(app.router.add_route("POST", "/hello", handler_put))
     cors.add(app.router.add_route("DELETE", "/hello", handler_delete))
 
+
+Also you can enable CORS for all added routes by accessing routes list
+in router:
+
+.. code-block:: python
+
+    # Setup application routes.
+    app.router.add_route("GET", "/hello", handler_get)
+    app.router.add_route("PUT", "/hello", handler_put)
+    app.router.add_route("POST", "/hello", handler_put)
+    app.router.add_route("DELETE", "/hello", handler_delete)
+
+    # Configure default CORS settings.
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+    })
+
+    # Configure CORS on all routes.
+    for route in list(app.router.routes()):
+        cors.add(route)
+
 Security
 ========
 

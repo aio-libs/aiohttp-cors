@@ -24,7 +24,7 @@ from .__about__ import (
     __license__, __copyright__,
 )
 from .urldispatcher_router_adapter import UrlDistatcherRouterAdapter
-from .router_adapter import RouterAdapter
+from .router_adapter import AbstractRouterAdapter
 from ._log import logger as _logger
 from .resource_options import ResourceOptions
 from .cors_config import CorsConfig

@@ -22,7 +22,7 @@ from typing import Mapping, Union, Any
 from aiohttp import hdrs, web
 
 from .urldispatcher_router_adapter import UrlDistatcherRouterAdapter
-from .router_adapter import RouterAdapter
+from .router_adapter import AbstractRouterAdapter
 from ._log import logger as _logger
 from .resource_options import ResourceOptions
 
@@ -112,7 +112,7 @@ class CorsConfig:
     def __init__(self, app: web.Application, *,
                  defaults: Mapping[str, Union[ResourceOptions,
                                               Mapping[str, Any]]]=None,
-                 router_adapter: RouterAdapter=None):
+                 router_adapter: AbstractRouterAdapter=None):
         """Construct CORS configuration.
 
         :param app:

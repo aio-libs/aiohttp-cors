@@ -12,20 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""RouterAdapter for aiohttp.web.UrlDispatcher.
+"""AbstractRouterAdapter for aiohttp.web.UrlDispatcher.
 """
 
 import re
 
 from aiohttp import web
 
-from .router_adapter import RouterAdapter
+from .router_adapter import AbstractRouterAdapter
 
 __all__ = ("UrlDistatcherRouterAdapter",)
 
 
-class UrlDistatcherRouterAdapter(RouterAdapter):
-    """RouterAdapter for aiohttp.web.UrlDispatcher"""
+class UrlDistatcherRouterAdapter(AbstractRouterAdapter):
+    """AbstractRouterAdapter for aiohttp.web.UrlDispatcher"""
     def __init__(self, router: web.UrlDispatcher):
         self._router = router
 

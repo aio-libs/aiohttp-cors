@@ -18,10 +18,10 @@
 import abc
 
 
-__all__ = ("RouterAdapter",)
+__all__ = ("AbstractRouterAdapter",)
 
 
-class RouterAdapter(metaclass=abc.ABCMeta):
+class AbstractRouterAdapter(metaclass=abc.ABCMeta):
     """Router adapter is a minimal interface to router implementation that
     is required to implement CORS handling.
     """

@@ -333,13 +333,14 @@ Prerequisites:
 
 To release vA.B.C from the current version in master branch you need to:
 
-1. Create local branch vA.B.C.
+1. Create local branch ``vA.B.C``.
 2. In ``CHANGES.rst`` set release date to today.
-3. In ``aiohttp_cors/__about__.py`` change version from A.B.Ca0 to A.B.C.
-4. Create pull request with vA.B.C branch, wait for all checks to successfully
-   finish (Travis and Appveyor).
+3. In ``aiohttp_cors/__about__.py`` change version from ``A.B.Ca0`` to
+   ``A.B.C``.
+4. Create pull request with ``vA.B.C`` branch, wait for all checks to
+   successfully finish (Travis and Appveyor).
 5. Merge pull request to master.
-6. Update and checkout master branch.
+6. Update and checkout ``master`` branch.
 7. Build distribution:
 
    .. code-block:: bash
@@ -366,8 +367,8 @@ To release vA.B.C from the current version in master branch you need to:
 Post release steps:
 
 1. In ``CHANGES.rst`` add template for the next release.
-2. In ``aiohttp_cors/__about__.py`` change version from A.B.C to
-    A.(B + 1).0a0.
+2. In ``aiohttp_cors/__about__.py`` change version from ``A.B.C`` to
+   ``A.(B + 1).0a0``.
 
 Bugs
 ====

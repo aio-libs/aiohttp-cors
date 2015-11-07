@@ -331,7 +331,8 @@ Prerequisites:
 
 2. Configure PyPI credentials in ``~/.pypirc``.
 
-To release vA.B.C from the current version in master branch you need to:
+To release version ``vA.B.C`` from the current version of ``master`` branch
+you need to:
 
 1. Create local branch ``vA.B.C``.
 2. In ``CHANGES.rst`` set release date to today.

@@ -22,7 +22,7 @@ from typing import Mapping, Union, Any
 from aiohttp import hdrs, web
 
 from .urldispatcher_router_adapter import UrlDistatcherRouterAdapter
-from .router_adapter import AbstractRouterAdapter
+from .abc import AbstractRouterAdapter
 from ._log import logger as _logger
 from .resource_options import ResourceOptions
 

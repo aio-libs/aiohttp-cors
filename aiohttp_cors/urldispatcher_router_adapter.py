@@ -19,7 +19,7 @@ import re
 
 from aiohttp import web
 
-from .router_adapter import AbstractRouterAdapter
+from .abc import AbstractRouterAdapter
 
 __all__ = ("UrlDistatcherRouterAdapter",)
 

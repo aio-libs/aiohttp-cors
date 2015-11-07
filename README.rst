@@ -316,6 +316,60 @@ To run run Selenium tests with Chromium web driver you need to:
    environment variable to ``chromedriver``, e.g. on Ubuntu 14.04
    ``WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver``.
 
+Release process
+---------------
+
+Prerequisites:
+
+1. Install fresh versions of setuptools and pip.
+   Install ``wheel`` for building wheels.
+   Install ``twine`` for uploading to PyPI.
+
+   .. code-block:: bash
+
+      pip install -U pip setuptools twine wheel
+
+2. Configure PyPI credentials in ``~/.pypirc``.
+
+To release version ``vA.B.C`` from the current version of ``master`` branch
+you need to:
+
+1. Create local branch ``vA.B.C``.
+2. In ``CHANGES.rst`` set release date to today.
+3. In ``aiohttp_cors/__about__.py`` change version from ``A.B.Ca0`` to
+   ``A.B.C``.
+4. Create pull request with ``vA.B.C`` branch, wait for all checks to
+   successfully finish (Travis and Appveyor).
+5. Merge pull request to master.
+6. Update and checkout ``master`` branch.
+7. Build distribution:
+
+   .. code-block:: bash
+
+      rm -rf build dist; python setup.py sdist bdist_wheel
+
+8. Upload new release to PyPI:
+
+   .. code-block:: bash
+
+      twine upload dist/*
+
+9. Create and push tag for release version to GitHub:
+
+   .. code-block:: python
+
+      git tag vA.B.C
+      git push --tags
+
+10. Edit release description on GitHub if needed.
+11. Announce new release on the *aio-libs* mailing list:
+    https://groups.google.com/forum/#!forum/aio-libs.
+
+Post release steps:
+
+1. In ``CHANGES.rst`` add template for the next release.
+2. In ``aiohttp_cors/__about__.py`` change version from ``A.B.C`` to
+   ``A.(B + 1).0a0``.
 
 Bugs
 ====

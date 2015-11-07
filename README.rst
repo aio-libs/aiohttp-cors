@@ -352,19 +352,22 @@ To release vA.B.C from the current version in master branch you need to:
 
       twine upload dist/*
 
-9. In ``CHANGES.rst`` add template for the next release.
-10. In ``aiohttp_cors/__about__.py`` change version from A.B.C to
-    A.(B + 1).0a0.
-11. Create and push tag for release version to GitHub:
+9. Create and push tag for release version to GitHub:
 
    .. code-block:: python
 
       git tag vA.B.C
       git push --tags
 
-12. Edit release description on GitHub if needed.
-13. Announce new release on the *aio-libs* mailing list:
+10. Edit release description on GitHub if needed.
+11. Announce new release on the *aio-libs* mailing list:
     https://groups.google.com/forum/#!forum/aio-libs.
+
+Post release steps:
+
+1. In ``CHANGES.rst`` add template for the next release.
+2. In ``aiohttp_cors/__about__.py`` change version from A.B.C to
+    A.(B + 1).0a0.
 
 Bugs
 ====

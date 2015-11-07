@@ -372,6 +372,7 @@ Bugs
 Please report bugs, issues, feature requests, etc. on 
 `GitHub <https://github.com/aio-libs/aiohttp_cors/issues>`__.
 
+
 License
 =======
 

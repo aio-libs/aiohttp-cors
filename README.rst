@@ -316,7 +316,6 @@ To run run Selenium tests with Chromium web driver you need to:
    environment variable to ``chromedriver``, e.g. on Ubuntu 14.04
    ``WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver``.
 
-
 Release process
 ---------------
 
@@ -366,6 +365,12 @@ To release vA.B.C from the current version in master branch you need to:
 12. Edit release description on GitHub if needed.
 13. Announce new release on the *aio-libs* mailing list:
     https://groups.google.com/forum/#!forum/aio-libs.
+
+Bugs
+====
+
+Please report bugs, issues, feature requests, etc. on 
+`GitHub <https://github.com/aio-libs/aiohttp_cors/issues>`__.
 
 License
 =======

@@ -25,7 +25,7 @@ __all__ = ("UrlDistatcherRouterAdapter",)
 
 
 class UrlDistatcherRouterAdapter(AbstractRouterAdapter):
-    """AbstractRouterAdapter for aiohttp.web.UrlDispatcher"""
+    """Router adapter for aiohttp.web.UrlDispatcher"""
     def __init__(self, router: web.UrlDispatcher):
         self._router = router
 

@@ -59,9 +59,7 @@ setup(
     ] + pytest_runner,
     tests_require=[
         "pytest",
-        "pytest-pep8",
         "pytest-cov",
-        "pytest-flakes",
         "pytest-pylint",
         "selenium",
     ],

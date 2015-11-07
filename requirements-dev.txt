@@ -4,6 +4,7 @@ pytest-cov
 pytest-runner
 pytest-flakes
 pytest-pylint
+flake8
 selenium
 docutils
 pygments

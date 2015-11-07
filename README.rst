@@ -303,11 +303,10 @@ TODO: fill this
 Development
 ===========
 
+To run Selenium tests with Firefox web driver you need to install Firefox.
 TODO:
 
-To run run Selenium tests with Firefox web driver you need to install Firefox.
-
-To run run Selenium tests with Chromium web driver you need to:
+To run Selenium tests with Chromium web driver you need to:
 
 1. Install Chrome driver. On Ubuntu 14.04 it's in ``chromium-chromedriver``
    package.

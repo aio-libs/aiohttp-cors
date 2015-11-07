@@ -23,9 +23,6 @@ from .__about__ import (
     __title__, __version__, __author__, __email__, __summary__, __uri__,
     __license__, __copyright__,
 )
-from .urldispatcher_router_adapter import UrlDistatcherRouterAdapter
-from .abc import AbstractRouterAdapter
-from ._log import logger as _logger
 from .resource_options import ResourceOptions
 from .cors_config import CorsConfig
 

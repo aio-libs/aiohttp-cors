@@ -212,11 +212,12 @@ class TestInBrowser(AioTestBase):
             run_button = wait.until(EC.element_to_be_clickable(
                 (By.ID, "runTestsButton")))
 
-            # Start tests
+            # Start tests.
             run_button.send_keys(Keys.RETURN)
 
-            # Wait while test will finish
-            clear_button = wait.until(EC.element_to_be_clickable(
+            # Wait while test will finish (until clear button is not
+            # activated).
+            wait.until(EC.element_to_be_clickable(
                 (By.ID, "clearResultsButton")))
 
             # Get results json

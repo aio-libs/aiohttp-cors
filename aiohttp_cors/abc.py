@@ -15,22 +15,22 @@
 """Abstract base classes.
 """
 
-import abc
+from abc import ABCMeta, abstractmethod
 
 
 __all__ = ("AbstractRouterAdapter",)
 
 
-class AbstractRouterAdapter(metaclass=abc.ABCMeta):
+class AbstractRouterAdapter(metaclass=ABCMeta):
     """Router adapter is a minimal interface to router implementation that
     is required to implement CORS handling.
     """
 
-    @abc.abstractmethod
+    @abstractmethod
     def route_methods(self, route):
         """Returns list of HTTP methods that route handles"""
 
-    @abc.abstractmethod
+    @abstractmethod
     def add_options_method_handler(self, route, handler):
         """Add OPTIONS method request handler that will be issued at the same
         paths as provided `route`.

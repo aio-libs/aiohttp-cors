@@ -317,6 +317,13 @@ To run run Selenium tests with Chromium web driver you need to:
    ``WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver``.
 
 
+Bugs
+====
+
+Please report bugs, issues, feature requests, etc. on 
+`GitHub <https://github.com/aio-libs/aiohttp_cors/issues>`__.
+
+
 License
 =======
 

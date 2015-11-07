@@ -6,4 +6,6 @@ pytest-runner
 pytest-flakes
 pytest-pylint
 selenium
+docutils
+pygments
 -e .

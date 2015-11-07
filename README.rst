@@ -364,6 +364,8 @@ To release vA.B.C from the current version in master branch you need to:
       git push --tags
 
 12. Edit release description on GitHub if needed.
+13. Announce new release on the *aio-libs* mailing list:
+    https://groups.google.com/forum/#!forum/aio-libs.
 
 License
 =======

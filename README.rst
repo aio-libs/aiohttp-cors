@@ -303,11 +303,42 @@ TODO: fill this
 Development
 ===========
 
-TODO:
+To setup development environment:
 
-To run run Selenium tests with Firefox web driver you need to install Firefox.
+.. code-block:: bash
 
-To run run Selenium tests with Chromium web driver you need to:
+   # Clone sources repository:
+   git clone https://github.com/aio-libs/aiohttp_cors.git .
+   # Create and activate virtual Python environment:
+   python3 -m venv env
+   source env/bin/activate
+   # Install requirements and aiohttp_cors into virtual environment
+   pip install -r requirements-dev.txt
+
+To run tests:
+
+.. code-block:: bash
+
+   tox
+
+To run only runtime tests in current environment:
+
+.. code-block:: bash
+
+   py.test
+
+To run only static code analysis checks:
+
+.. code-block:: bash
+
+   tox -e check
+
+Running Selenium tests
+----------------------
+
+To run Selenium tests with Firefox web driver you need to install Firefox.
+
+To run Selenium tests with Chromium web driver you need to:
 
 1. Install Chrome driver. On Ubuntu 14.04 it's in ``chromium-chromedriver``
    package.

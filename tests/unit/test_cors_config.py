@@ -81,3 +81,31 @@ class TestCorsConfig(unittest.TestCase):
 
         self.assertEqual(len(self.cors._route_config), 1)
         self.assertEqual(len(self.cors._preflight_route_settings), 1)
+
+    def test_plain_named_route(self):
+        """Test adding plain named route."""
+        # Adding CORS routes should not introduce new named routes.
+        self.assertEqual(len(self.app.router.keys()), 0)
+        route = self.app.router.add_route(
+            "GET", "/{name}", _handler, name="dynamic_named_route")
+        self.assertEqual(len(self.app.router.keys()), 1)
+        self.cors.add(route)
+        self.assertEqual(len(self.app.router.keys()), 1)
+
+    def test_dynamic_named_route(self):
+        """Test adding dynamic named route."""
+        self.assertEqual(len(self.app.router.keys()), 0)
+        route = self.app.router.add_route(
+            "GET", "/{name}", _handler, name="dynamic_named_route")
+        self.assertEqual(len(self.app.router.keys()), 1)
+        self.cors.add(route)
+        self.assertEqual(len(self.app.router.keys()), 1)
+
+    def test_static_named_route(self):
+        """Test adding dynamic named route."""
+        self.assertEqual(len(self.app.router.keys()), 0)
+        route = self.app.router.add_static(
+            "/file", "/", name="dynamic_named_route")
+        self.assertEqual(len(self.app.router.keys()), 1)
+        self.cors.add(route)
+        self.assertEqual(len(self.app.router.keys()), 1)

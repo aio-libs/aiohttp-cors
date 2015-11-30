@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-0.2.0 (XXXX-XX-XX)
+0.2.0 (2015-11-30)
 ------------------
 
 - Move ABCs from ``aiohttp_cors.router_adapter`` to ``aiohttp_cors.abc``.

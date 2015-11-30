@@ -41,7 +41,7 @@ class UrlDistatcherRouterAdapter(AbstractRouterAdapter):
 
         elif isinstance(route, web.DynamicRoute):
             new_route = web.DynamicRoute(
-                method, handler, route.name, route._pattern, route._formatter)
+                method, handler, None, route._pattern, route._formatter)
             self._router.register_route(new_route)
 
         elif isinstance(route, web.StaticRoute):
@@ -49,7 +49,7 @@ class UrlDistatcherRouterAdapter(AbstractRouterAdapter):
             # regexp performance is not enough.
             pattern = re.compile("^" + re.escape(route._prefix))
             new_route = web.DynamicRoute(
-                method, handler, route.name, pattern, "")
+                method, handler, None, pattern, "")
             self._router.register_route(new_route)
 
         else:

@@ -23,22 +23,23 @@ from aiohttp import web
 from aiohttp_cors import CorsConfig, ResourceOptions
 
 
+def _handler(request):
+    return web.Response(text="Done")
+
+
 class TestCorsConfig(unittest.TestCase):
     """Unit tests for CorsConfig"""
 
     def setUp(self):
-        def handler(request):
-            return web.Response(text="Done")
-
         self.loop = asyncio.new_event_loop()
         self.app = web.Application(loop=self.loop)
         self.cors = CorsConfig(self.app, defaults={
             "*": ResourceOptions()
         })
         self.get_route = self.app.router.add_route(
-            "GET", "/get_path", handler)
+            "GET", "/get_path", _handler)
         self.options_route = self.app.router.add_route(
-            "OPTIONS", "/options_path", handler)
+            "OPTIONS", "/options_path", _handler)
 
     def tearDown(self):
         self.loop.close()

@@ -8,6 +8,8 @@ CHANGES
 
 - Rename ``RouterAdapter`` to ``AbstractRouterAdapter``.
 
+- Fix bug with configuring CORS for named routes.
+
 0.1.0 (2015-11-05)
 ------------------
 

@@ -21,10 +21,10 @@ from aiohttp import web
 
 from .abc import AbstractRouterAdapter
 
-__all__ = ("UrlDistatcherRouterAdapter",)
+__all__ = ("UrlDispatcherRouterAdapter",)
 
 
-class UrlDistatcherRouterAdapter(AbstractRouterAdapter):
+class UrlDispatcherRouterAdapter(AbstractRouterAdapter):
     """Router adapter for aiohttp.web.UrlDispatcher"""
     def __init__(self, router: web.UrlDispatcher):
         self._router = router

@@ -21,7 +21,7 @@ from typing import Mapping, Union, Any
 
 from aiohttp import hdrs, web
 
-from .urldispatcher_router_adapter import UrlDistatcherRouterAdapter
+from .urldispatcher_router_adapter import UrlDispatcherRouterAdapter
 from .abc import AbstractRouterAdapter
 from ._log import logger as _logger
 from .resource_options import ResourceOptions
@@ -128,7 +128,7 @@ class CorsConfig:
         self._router_adapter = router_adapter
         if self._router_adapter is None:
             if isinstance(self._app.router, web.UrlDispatcher):
-                self._router_adapter = UrlDistatcherRouterAdapter(
+                self._router_adapter = UrlDispatcherRouterAdapter(
                     self._app.router)
             else:
                 raise RuntimeError(

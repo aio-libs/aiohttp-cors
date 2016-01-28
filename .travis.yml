@@ -8,10 +8,10 @@ install:
   - pip install --upgrade pip setuptools wheel
   - pip install -Ur requirements-dev.txt
   - python setup.py develop
-
-script:
   # asyncio git repo has only *.pyx files, so install cython too.
   - '[ -z "$LATEST_ASYNCIO" ] || pip install -U cython git+https://github.com/KeepSafe/aiohttp.git'
+
+script:
   - python setup.py test
 
 env:

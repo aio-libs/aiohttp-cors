@@ -10,11 +10,13 @@ install:
   - python setup.py develop
 
 script:
-  python setup.py test
+  # asyncio git repo has only *.pyx files, so install cython too.
+  - '[ -z "$LATEST_ASYNCIO" ] || pip install -U cython git+https://github.com/KeepSafe/aiohttp.git'
+  - python setup.py test
 
 env:
   matrix:
     # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
     # is any non empty string.
-    - PYTHONASYNCIODEBUG=X
-    - PYTHONASYNCIODEBUG=
+    - PYTHONASYNCIODEBUG=X LATEST_ASYNCIO=
+    - PYTHONASYNCIODEBUG=  LATEST_ASYNCIO=X

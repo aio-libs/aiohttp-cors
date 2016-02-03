@@ -387,7 +387,7 @@ you need to:
 
 9. Create and push tag for release version to GitHub:
 
-   .. code-block:: python
+   .. code-block:: bash
 
       git tag vA.B.C
       git push --tags

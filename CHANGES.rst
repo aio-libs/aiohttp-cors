@@ -6,6 +6,9 @@ CHANGES
 
 - Rename ``UrlDistatcherRouterAdapter`` to ``UrlDispatcherRouterAdapter``.
 
+- Set maximum supported ``aiohttp`` version to ``0.20.2``, see bug #30 for
+  details.
+
 0.2.0 (2015-11-30)
 ------------------
 

@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-0.3.0 (XXXX-XX-XX)
+0.3.0 (2016-02-06)
 ------------------
 
 - Rename ``UrlDistatcherRouterAdapter`` to ``UrlDispatcherRouterAdapter``.

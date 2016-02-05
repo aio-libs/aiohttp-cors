@@ -173,7 +173,12 @@ class IntegrationServers:
         # Add CORS routes.
         for server_name in cors_server_names:
             server_descr = self.servers[server_name]
-            server_descr.cors.add(server_descr.app.router["cors_resource"])
+            # TODO: Starting from aiohttp 0.21.0 name-based access returns
+            # Resource, not Route. Manually get route while aiohttp_cors
+            # doesn't support configuring for Resources.
+            resource = server_descr.app.router["cors_resource"]
+            route = next(iter(resource))
+            server_descr.cors.add(route)
 
     @asyncio.coroutine
     def stop_servers(self):

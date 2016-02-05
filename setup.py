@@ -65,7 +65,10 @@ setup(
     ],
     test_suite="tests",
     install_requires=[
-        "aiohttp>=0.18.0",
+        # aiohttp_cors doesn't work with aiohttp >= 0.21, see issue #30 for
+        # details.
+        # It's tempting to specify "<0.21", but 0.21.0a0 >= 0.21.
+        "aiohttp>=0.18.0,<=0.20.2",
     ],
     extras_require={
         # TODO: Rich comparison in environment markers are broken in

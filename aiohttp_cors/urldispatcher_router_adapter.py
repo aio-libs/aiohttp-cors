@@ -70,14 +70,18 @@ class _UrlDispatcherRouterAdapter_v21(AbstractRouterAdapter):
     def __init__(self, router: web.UrlDispatcher):
         self._router = router
 
-    def route_methods(self, route: web.AbstractRoute):
+    def route_methods(self, route):
         """Returns list of HTTP methods that route handles"""
         return [route.method]
 
-    def add_options_method_handler(self, route: web.AbstractRoute, handler):
+    def add_options_method_handler(self, route, handler):
         method = "OPTIONS"
 
-        if isinstance(route, web.ResourceRoute):
+        # TODO: Use web.ResourceRoute when this issue will be fixed:
+        # <https://github.com/KeepSafe/aiohttp/pull/767>
+        from aiohttp.web_urldispatcher import ResourceRoute
+
+        if isinstance(route, ResourceRoute):
             # Route added through Resource API.
             new_route = route.resource.add_route(method, handler)
 

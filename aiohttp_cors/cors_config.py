@@ -164,11 +164,16 @@ class CorsConfig:
         :return: ``route``.
         """
 
-        if _AIOHTTP_0_21 and isinstance(route, web.AbstractResource):
-            # TODO: Resources should be supported.
-            raise RuntimeError(
-                "You need to pass Route to the CORS config, and you passed "
-                "Resource.")
+        if _AIOHTTP_0_21:
+            # TODO: Use web.AbstractResource when this issue will be fixed:
+            # <https://github.com/KeepSafe/aiohttp/pull/767>
+            from aiohttp.web_urldispatcher import AbstractResource
+
+            if isinstance(route, AbstractResource):
+                # TODO: Resources should be supported.
+                raise RuntimeError(
+                    "You need to pass Route to the CORS config, and you "
+                    "passed Resource.")
 
         if route in self._preflight_route_settings:
             _logger.warning(

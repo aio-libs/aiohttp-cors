@@ -17,8 +17,10 @@
 
 import asyncio
 import collections
+from pkg_resources import parse_version
 from typing import Mapping, Union, Any
 
+import aiohttp
 from aiohttp import hdrs, web
 
 from .urldispatcher_router_adapter import UrlDispatcherRouterAdapter
@@ -43,6 +45,8 @@ _SIMPLE_RESPONSE_HEADERS = frozenset([
     hdrs.LAST_MODIFIED,
     hdrs.PRAGMA
 ])
+
+_AIOHTTP_0_21 = parse_version(aiohttp.__version__) >= parse_version('0.21.0')
 
 
 def _parse_config_options(
@@ -159,6 +163,17 @@ class CorsConfig:
             CORS options for the route.
         :return: ``route``.
         """
+
+        if _AIOHTTP_0_21:
+            # TODO: Use web.AbstractResource when this issue will be fixed:
+            # <https://github.com/KeepSafe/aiohttp/pull/767>
+            from aiohttp.web_urldispatcher import AbstractResource
+
+            if isinstance(route, AbstractResource):
+                # TODO: Resources should be supported.
+                raise RuntimeError(
+                    "You need to pass Route to the CORS config, and you "
+                    "passed Resource.")
 
         if route in self._preflight_route_settings:
             _logger.warning(
@@ -286,6 +301,21 @@ class CorsConfig:
         # pylint: disable=bad-builtin
         return frozenset(filter(None, headers))
 
+    def _preflight_routes(self, path):
+        """Get list of registered preflight routes that handles path"""
+        if _AIOHTTP_0_21:
+            # TODO: Using of private _match(), because there is no public,
+            # see <https://github.com/KeepSafe/aiohttp/issues/766>.
+            routes = [
+                route for route in self._preflight_route_settings.keys() if
+                route.resource._match(path) is not None]
+        else:
+            routes = [
+                route for route in self._preflight_route_settings.keys() if
+                route.match(path) is not None]
+
+        return routes
+
     @asyncio.coroutine
     def _preflight_handler(self, request: web.Request):
         """CORS preflight request handler"""
@@ -301,9 +331,7 @@ class CorsConfig:
 
         # TODO: Test difference between request.raw_path and request.path.
         path = request.raw_path
-        preflight_routes = [
-            route for route in self._preflight_route_settings.keys() if
-            route.match(path) is not None]
+        preflight_routes = self._preflight_routes(path)
         method_to_config = {}
         for route in preflight_routes:
             config, methods = self._preflight_route_settings[route]

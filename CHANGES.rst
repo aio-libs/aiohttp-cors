@@ -4,6 +4,8 @@ CHANGES
 0.4.0 (2016-XX-XX)
 ------------------
 
+- Elevate minimum supported version of ``aiohttp`` to 0.21.4 to leverage new
+  Resources.
 
 0.3.0 (2016-02-06)
 ------------------

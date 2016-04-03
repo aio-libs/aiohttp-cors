@@ -244,7 +244,7 @@ You can specify default CORS-enabled resource options using
     # In addition to "http://client.example.org", GET request will be allowed
     # from "http://other-client.example.org" origin.
     cors.add(app.router.add_route("GET", "/hello", handler), {
-            "http://other-client.example.org"
+            "http://other-client.example.org": aiohttp_cors.ResourceOptions(),
         })
 
     # CORS will be enabled only on the resources added to `CorsConfig`,

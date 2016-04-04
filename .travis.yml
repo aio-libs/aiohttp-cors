@@ -23,6 +23,8 @@ script:
 - python setup.py test --addopts -v --addopts -s
 
 env:
+  global:
+  - WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver
   matrix:
   # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
   # is any non empty string.

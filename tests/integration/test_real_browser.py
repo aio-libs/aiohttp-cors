@@ -51,7 +51,7 @@ class _ServerDescr:
 class IntegrationServers:
     """Integration servers starting/stopping manager"""
 
-    def __init__(self, *, loop=None, use_resources=False):
+    def __init__(self, use_resources, *, loop=None):
         self.servers = {}
 
         self.loop = loop
@@ -211,9 +211,9 @@ def _get_chrome_driver():
 
 class TestInBrowser(AioTestBase):
     @asyncio.coroutine
-    def _test_in_webdriver(self, driver):
+    def _test_in_webdriver(self, driver, use_resources):
         # TODO: Use pytest's fixtures to test use resources/not use resources.
-        servers = IntegrationServers(use_resources=True)
+        servers = IntegrationServers(use_resources)
         yield from servers.start_servers()
 
         def selenium_thread():
@@ -260,7 +260,7 @@ class TestInBrowser(AioTestBase):
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver)
+            yield from self._test_in_webdriver(driver, False)
         finally:
             driver.close()
 
@@ -273,7 +273,33 @@ class TestInBrowser(AioTestBase):
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver)
+            yield from self._test_in_webdriver(driver, False)
+        finally:
+            driver.close()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_firefox_resource(self):
+        try:
+            driver = webdriver.Firefox()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver, True)
+        finally:
+            driver.close()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_chromium_resource(self):
+        try:
+            driver = _get_chrome_driver()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver, True)
         finally:
             driver.close()
 

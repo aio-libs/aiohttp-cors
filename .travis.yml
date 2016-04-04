@@ -1,8 +1,14 @@
 language: python
-sudo: false
+dist: trusty
 python:
 - 3.4
 - 3.5
+
+# TODO: Use Travis apt addon, when chromium-chromedriver will be supported
+# three: https://github.com/travis-ci/apt-package-whitelist/issues/574
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y chromium-browser chromium-chromedriver
 
 install:
 - pip install --upgrade pip setuptools wheel
@@ -13,10 +19,18 @@ install:
 # Test on oldest supported aiohttp version.
 - '[ -z "$OLDEST_AIOHTTP" ] || pip install aiohttp==0.21.4'
 
+before_script:
+  # Start X-server for Selenium tests.
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
+
 script:
-- python setup.py test
+- python setup.py test --addopts -v --addopts -s
 
 env:
+  global:
+  - WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver
   matrix:
   # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
   # is any non empty string.

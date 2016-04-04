@@ -29,6 +29,12 @@ env:
   - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
   - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
 
+matrix:
+  include:
+  # Environment to deploy project on PyPI.
+  - python: "3.5"
+    env: DEPLOY_ENV=1
+
 # Deploy on PyPI all tagged build on master branch.
 deploy:
   provider: pypi
@@ -39,4 +45,4 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: $TRAVIS_PYTHON_VERSION = "3.5"
+    condition: $DEPLOY_ENV = 1

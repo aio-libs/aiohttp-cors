@@ -40,4 +40,21 @@ class TestResourceOptions(unittest.TestCase):
         self.assertTrue(
             ResourceOptions(allow_credentials=True) != ResourceOptions())
 
+    def test_allow_methods(self):
+        self.assertIsNone(ResourceOptions().allow_methods)
+        self.assertEqual(
+            ResourceOptions(allow_methods='*').allow_methods,
+            '*')
+        self.assertEqual(
+            ResourceOptions(allow_methods=[]).allow_methods,
+            frozenset())
+        self.assertEqual(
+            ResourceOptions(allow_methods=['get']).allow_methods,
+            frozenset(['GET']))
+        self.assertEqual(
+            ResourceOptions(allow_methods=['get', 'Post']).allow_methods,
+            {'GET', 'POST'})
+        with self.assertRaises(ValueError):
+            ResourceOptions(allow_methods='GET')
+
 # TODO: test arguments parsing

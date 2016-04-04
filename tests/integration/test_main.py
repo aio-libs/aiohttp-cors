@@ -146,8 +146,27 @@ class TestMain(AioAiohttpAppTestBase):
 
         self.assertEqual(data, TEST_BODY)
 
+    @asynctest
     @asyncio.coroutine
-    def _run_simple_requests_tests(self, tests_descriptions):
+    def test_dummy_setup_roundtrip_resource(self):
+        """Test a dummy configuration with a message round-trip."""
+        app = web.Application()
+        setup(app)
+
+        app.router.add_resource("/").add_route("GET", handler)
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request("GET", self.server_url)
+        self.assertEqual(response.status, 200)
+        data = yield from response.text()
+
+        self.assertEqual(data, TEST_BODY)
+
+    @asyncio.coroutine
+    def _run_simple_requests_tests(self,
+                                   tests_descriptions,
+                                   use_resources):
         """Runs CORS simple requests (without a preflight request) based
         on the passed tests descriptions.
         """
@@ -177,9 +196,15 @@ class TestMain(AioAiohttpAppTestBase):
                 app = web.Application()
                 cors = setup(app, defaults=test_descr["defaults"])
 
-                cors.add(
-                    app.router.add_route("GET", "/resource", handler),
-                    test_descr["route_config"])
+                if use_resources:
+                    resource = cors.add(app.router.add_resource("/resource"))
+                    cors.add(resource.add_route("GET", handler),
+                             test_descr["route_config"])
+
+                else:
+                    cors.add(
+                        app.router.add_route("GET", "/resource", handler),
+                        test_descr["route_config"])
 
                 yield from self.create_server(app)
 
@@ -277,7 +302,8 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(tests_descriptions)
+        yield from self._run_simple_requests_tests(tests_descriptions, False)
+        yield from self._run_simple_requests_tests(tests_descriptions, True)
 
     @asynctest
     @asyncio.coroutine
@@ -348,7 +374,8 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(tests_descriptions)
+        yield from self._run_simple_requests_tests(tests_descriptions, False)
+        yield from self._run_simple_requests_tests(tests_descriptions, True)
 
     @asynctest
     @asyncio.coroutine
@@ -405,10 +432,12 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(tests_descriptions)
+        yield from self._run_simple_requests_tests(tests_descriptions, False)
+        yield from self._run_simple_requests_tests(tests_descriptions, True)
+        yield from self._run_simple_requests_tests(tests_descriptions, True)
 
     @asyncio.coroutine
-    def _run_preflight_requests_tests(self, tests_descriptions):
+    def _run_preflight_requests_tests(self, tests_descriptions, use_resources):
         """Runs CORS preflight requests based on the passed tests descriptions.
         """
 
@@ -441,9 +470,15 @@ class TestMain(AioAiohttpAppTestBase):
                 app = web.Application()
                 cors = setup(app, defaults=test_descr["defaults"])
 
-                cors.add(
-                    app.router.add_route("GET", "/resource", handler),
-                    test_descr["route_config"])
+                if use_resources:
+                    resource = cors.add(app.router.add_resource("/resource"))
+                    cors.add(resource.add_route("GET", handler),
+                             test_descr["route_config"])
+
+                else:
+                    cors.add(
+                        app.router.add_route("GET", "/resource", handler),
+                        test_descr["route_config"])
 
                 yield from self.create_server(app)
 
@@ -564,7 +599,10 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_preflight_requests_tests(tests_descriptions)
+        yield from self._run_preflight_requests_tests(
+            tests_descriptions, False)
+        yield from self._run_preflight_requests_tests(
+            tests_descriptions, True)
 
     @asynctest
     @asyncio.coroutine
@@ -600,7 +638,40 @@ class TestMain(AioAiohttpAppTestBase):
 
     @asynctest
     @asyncio.coroutine
-    def test_preflight_request_headers(self):
+    def test_preflight_request_multiple_routes_with_one_options_resource(self):
+        """Test CORS preflight handling on resource that is available through
+        several routes.
+        """
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+        })
+
+        resource = cors.add(app.router.add_resource("/{name}"))
+        cors.add(resource.add_route("GET", handler))
+        cors.add(resource.add_route("PUT", handler))
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url + "user",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+            }
+        )
+        self.assertEqual(response.status, 200)
+
+        data = yield from response.text()
+        self.assertEqual(data, "")
+
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_headers_resource(self):
         """Test CORS preflight request handlers handling."""
         app = web.Application()
         cors = setup(app, defaults={
@@ -623,13 +694,13 @@ class TestMain(AioAiohttpAppTestBase):
                 hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
             }
         )
+        self.assertEqual((yield from response.text()), "")
         self.assertEqual(response.status, 200)
         # Access-Control-Allow-Headers must be compared in case-insensitive
         # way.
         self.assertEqual(
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
             "content-type".upper())
-        self.assertEqual((yield from response.text()), "")
 
         response = yield from aiohttp.request(
             "OPTIONS", self.server_url,
@@ -664,7 +735,75 @@ class TestMain(AioAiohttpAppTestBase):
             "headers are not allowed: TEST",
             (yield from response.text()))
 
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_headers(self):
+        """Test CORS preflight request handlers handling."""
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers=("Content-Type", "X-Header"),
+            )
+        })
+
+        resource = cors.add(app.router.add_resource("/"))
+        cors.add(resource.add_route("PUT", handler))
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+            }
+        )
+        self.assertEqual((yield from response.text()), "")
+        self.assertEqual(response.status, 200)
+        # Access-Control-Allow-Headers must be compared in case-insensitive
+        # way.
+        self.assertEqual(
+            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
+            "content-type".upper())
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
+            }
+        )
+        self.assertEqual(response.status, 200)
+        # Access-Control-Allow-Headers must be compared in case-insensitive
+        # way.
+        self.assertEqual(
+            frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
+                      .upper().split(",")),
+            {"X-Header".upper(), "content-type".upper()})
+        self.assertEqual((yield from response.text()), "")
+
+        response = yield from aiohttp.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
+            }
+        )
+        self.assertEqual(response.status, 403)
+        self.assertNotIn(
+            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+            response.headers)
+        self.assertIn(
+            "headers are not allowed: TEST",
+            (yield from response.text()))
 
 # TODO: test requesting resources with not configured CORS.
 # TODO: test wildcard origin in default config.
 # TODO: test different combinations of ResourceOptions options.
+# TODO: remove deplication of resource/not resource configuration using
+# pytest's fixtures.

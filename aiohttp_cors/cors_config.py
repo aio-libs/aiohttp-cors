@@ -17,15 +17,13 @@
 
 import asyncio
 import collections
-from pkg_resources import parse_version
 from typing import Mapping, Union, Any
 
-import aiohttp
 from aiohttp import hdrs, web
 
-from .urldispatcher_router_adapter import UrlDispatcherRouterAdapter
+from .urldispatcher_router_adapter import OldRoutesUrlDispatcherRouterAdapter
+from .urldispatcher_router_adapter import ResourcesUrlDispatcherRouterAdapter
 from .abc import AbstractRouterAdapter
-from ._log import logger as _logger
 from .resource_options import ResourceOptions
 
 __all__ = (
@@ -45,8 +43,6 @@ _SIMPLE_RESPONSE_HEADERS = frozenset([
     hdrs.LAST_MODIFIED,
     hdrs.PRAGMA
 ])
-
-_AIOHTTP_0_21 = parse_version(aiohttp.__version__) >= parse_version('0.21.0')
 
 
 def _parse_config_options(
@@ -104,131 +100,63 @@ def _parse_config_options(
     return parsed
 
 
-class CorsConfig:
-    """CORS configuration instance.
+_ConfigType = Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]
 
-    The instance holds default CORS parameters and per-route options specified
-    in `add()` method.
 
-    Each `aiohttp.web.Application` can have exactly one instance of this class.
-    """
+class _CorsConfigImpl:
 
-    def __init__(self, app: web.Application, *,
-                 defaults: Mapping[str, Union[ResourceOptions,
-                                              Mapping[str, Any]]]=None,
-                 router_adapter: AbstractRouterAdapter=None):
-        """Construct CORS configuration.
-
-        :param app:
-            Application for which CORS configuration is built.
-        :param defaults:
-            Default CORS settings for origins.
-        :param router_adapter:
-            Router adapter. Required if application uses non-default router.
-        """
-
+    def __init__(self,
+                 app: web.Application,
+                 router_adapter: AbstractRouterAdapter):
         self._app = app
 
         self._router_adapter = router_adapter
-        if self._router_adapter is None:
-            if isinstance(self._app.router, web.UrlDispatcher):
-                self._router_adapter = UrlDispatcherRouterAdapter(
-                    self._app.router)
-            else:
-                raise RuntimeError(
-                    "Router adapter not specified. "
-                    "Routers other than aiohttp.web.UrlDispatcher requires"
-                    "custom router adapter.")
 
-        self._default_config = _parse_config_options(defaults)
-
-        self._route_config = {}
-        # Preflight handlers stored in order in which routes were configured
-        # with CORS (order of "cors.add(...)" calls).
-        self._preflight_route_settings = collections.OrderedDict()
-
+        # Register hook for all responses.  This hook handles CORS-related
+        # headers on non-preflight requests.
         self._app.on_response_prepare.append(self._on_response_prepare)
 
     def add(self,
-            route,
-            config: Mapping[str, Union[ResourceOptions,
-                                       Mapping[str, Any]]]=None):
-        """Enable CORS for specific route.
+            routing_entity,
+            config: _ConfigType=None):
+        """Enable CORS for specific route or resource.
 
-        CORS is enable **only** for routes added with this method.
+        If route is passed CORS is enabled for route's resource.
 
-        :param route:
-            Route for which CORS will be enabled.
+        :param routing_entity:
+            Route or Resource for which CORS should be enabled.
         :param config:
             CORS options for the route.
-        :return: ``route``.
+        :return: `routing_entity`.
         """
 
-        if _AIOHTTP_0_21:
-            # TODO: Use web.AbstractResource when this issue will be fixed:
-            # <https://github.com/KeepSafe/aiohttp/pull/767>
-            from aiohttp.web_urldispatcher import AbstractResource
-
-            if isinstance(route, AbstractResource):
-                # TODO: Resources should be supported.
-                raise RuntimeError(
-                    "You need to pass Route to the CORS config, and you "
-                    "passed Resource.")
-
-        if route in self._preflight_route_settings:
-            _logger.warning(
-                "Trying to configure CORS for internal CORS handler route. "
-                "Ignoring:\n"
-                "{!r}".format(route))
-            return route
-
-        if config is None and not self._default_config:
-            _logger.warning(
-                "No allowed origins configured for route %s, "
-                "resource will not be shared with other origins. "
-                "Setup either default origins in "
-                "aiohttp_cors.setup(app, defaults=...) or"
-                "explicitly specify origins when adding route to CORS.", route)
-
         parsed_config = _parse_config_options(config)
-        defaulted_config = collections.ChainMap(
-            parsed_config, self._default_config)
 
-        route_methods = frozenset(self._router_adapter.route_methods(route))
+        self._router_adapter.add_preflight_handler(
+            routing_entity, self._preflight_handler)
+        self._router_adapter.set_config_for_routing_entity(
+            routing_entity, parsed_config)
 
-        # TODO: Limited handling of CORS on OPTIONS may be useful?
-        if {hdrs.METH_ANY, hdrs.METH_OPTIONS}.intersection(route_methods):
-            raise ValueError(
-                "CORS can't be enabled on route that handles OPTIONS "
-                "request:\n"
-                "{!r}".format(route))
-
-        assert route not in self._route_config
-        self._route_config[route] = defaulted_config
-
-        # Add preflight request handler
-        preflight_route = self._router_adapter.add_options_method_handler(
-            route, self._preflight_handler)
-
-        assert preflight_route not in self._preflight_route_settings
-        self._preflight_route_settings[preflight_route] = \
-            (defaulted_config, route_methods)
-
-        return route
+        return routing_entity
 
     @asyncio.coroutine
     def _on_response_prepare(self,
                              request: web.Request,
                              response: web.StreamResponse):
-        """(Potentially) simple CORS request response processor.
+        """Non-preflight CORS request response processor.
 
         If request is done on CORS-enabled route, process request parameters
         and set appropriate CORS response headers.
         """
-        route = request.match_info.route
-        config = self._route_config.get(route)
-        if config is None:
+        if (not self._router_adapter.is_cors_enabled_on_request(request) or
+                self._router_adapter.is_preflight_request(request)):
+            # Either not CORS enabled route, or preflight request which is
+            # handled in its own handler.
             return
+
+        # Processing response of non-preflight CORS-enabled request.
+
+        config = self._router_adapter.get_non_preflight_request_config(request)
 
         # Handle according to part 6.1 of the CORS specification.
 
@@ -301,50 +229,9 @@ class CorsConfig:
         # pylint: disable=bad-builtin
         return frozenset(filter(None, headers))
 
-    def _preflight_routes(self, path):
-        """Get list of registered preflight routes that handles path"""
-        if _AIOHTTP_0_21:
-            # TODO: Using of private _match(), because there is no public,
-            # see <https://github.com/KeepSafe/aiohttp/issues/766>.
-            routes = [
-                route for route in self._preflight_route_settings.keys() if
-                route.resource._match(path) is not None]
-        else:
-            routes = [
-                route for route in self._preflight_route_settings.keys() if
-                route.match(path) is not None]
-
-        return routes
-
     @asyncio.coroutine
     def _preflight_handler(self, request: web.Request):
         """CORS preflight request handler"""
-
-        # Single path can be handled by multiple routes with different
-        # methods, e.g.:
-        #     GET /user/1
-        #     POST /user/1
-        #     DELETE /user/1
-        # In this case several OPTIONS CORS handlers are configured for the
-        # path, but aiohttp resolves all OPTIONS query to the first handler.
-        # Gather all routes that corresponds to the current request path.
-
-        # TODO: Test difference between request.raw_path and request.path.
-        path = request.raw_path
-        preflight_routes = self._preflight_routes(path)
-        method_to_config = {}
-        for route in preflight_routes:
-            config, methods = self._preflight_route_settings[route]
-            for method in methods:
-                if method in method_to_config:
-                    if config != method_to_config[method]:
-                        # TODO: Catch logged errors in tests.
-                        _logger.error(
-                            "Path '{path}' matches several CORS handlers with "
-                            "different configuration. Using first matched "
-                            "configuration.".format(
-                                path=path))
-                method_to_config[method] = config
 
         # Handle according to part 6.2 of the CORS specification.
 
@@ -359,13 +246,16 @@ class CorsConfig:
         request_method = self._parse_request_method(request)
 
         # CORS 6.2.5. Doing it out of order is not an error.
-        if request_method not in method_to_config:
+
+        try:
+            config = \
+                yield from self._router_adapter.get_preflight_request_config(
+                    request, origin, request_method)
+        except KeyError:
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "
-                     "request method '{}' is not allowed".format(
-                         request_method))
-
-        config = method_to_config[request_method]
+                     "request method {!r} is not allowed "
+                     "for {!r} origin".format(request_method, origin))
 
         if not config:
             # No allowed origins for the route.
@@ -427,3 +317,95 @@ class CorsConfig:
                 ",".join(request_headers)
 
         return response
+
+
+class CorsConfig:
+    """CORS configuration instance.
+
+    The instance holds default CORS parameters and per-route options specified
+    in `add()` method.
+
+    Each `aiohttp.web.Application` can have exactly one instance of this class.
+    """
+
+    def __init__(self, app: web.Application, *,
+                 defaults: _ConfigType=None,
+                 router_adapter: AbstractRouterAdapter=None):
+        """Construct CORS configuration.
+
+        :param app:
+            Application for which CORS configuration is built.
+        :param defaults:
+            Default CORS settings for origins.
+        :param router_adapter:
+            Router adapter. Required if application uses non-default router.
+        """
+
+        defaults = _parse_config_options(defaults)
+
+        self._cors_impl = None
+
+        self._resources_router_adapter = None
+        self._resources_cors_impl = None
+
+        self._old_routes_cors_impl = None
+
+        if router_adapter is not None:
+            self._cors_impl = _CorsConfigImpl(app, router_adapter)
+
+        elif isinstance(app.router, web.UrlDispatcher):
+            self._resources_router_adapter = \
+                ResourcesUrlDispatcherRouterAdapter(app.router, defaults)
+            self._resources_cors_impl = _CorsConfigImpl(
+                app,
+                self._resources_router_adapter)
+            self._old_routes_cors_impl = _CorsConfigImpl(
+                app,
+                OldRoutesUrlDispatcherRouterAdapter(app.router, defaults))
+        else:
+            raise RuntimeError(
+                "Router adapter is not specified. "
+                "Routers other than aiohttp.web.UrlDispatcher requires"
+                "custom router adapter.")
+
+    def add(self,
+            routing_entity,
+            config: _ConfigType = None):
+        """Enable CORS for specific route or resource.
+
+        If route is passed CORS is enabled for route's resource.
+
+        :param routing_entity:
+            Route or Resource for which CORS should be enabled.
+        :param config:
+            CORS options for the route.
+        :return: `routing_entity`.
+        """
+
+        if self._cors_impl is not None:
+            # Custom router adapter.
+            return self._cors_impl.add(routing_entity, config)
+
+        else:
+            # UrlDispatcher.
+
+            if isinstance(routing_entity, web.Resource):
+                # New Resource - use new router adapter.
+                return self._resources_cors_impl.add(routing_entity, config)
+
+            elif isinstance(routing_entity, web.AbstractRoute):
+                if self._resources_router_adapter.is_cors_for_resource(
+                        routing_entity.resource):
+                    # Route which resource has CORS configuration in
+                    # new-style router adapter.
+                    return self._resources_cors_impl.add(
+                        routing_entity, config)
+                else:
+                    # Route which resource has no CORS configuration, i.e.
+                    # old-style route.
+                    return self._old_routes_cors_impl.add(
+                        routing_entity, config)
+
+            else:
+                raise ValueError(
+                    "Unknown resource/route type: {!r}".format(routing_entity))

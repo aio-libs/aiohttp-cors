@@ -4,8 +4,30 @@ CHANGES
 0.4.0 (2016-XX-XX)
 ------------------
 
-- Elevate minimum supported version of ``aiohttp`` to 0.21.4 to leverage new
-  Resources.
+- Fixed support with new Resources objects introduced in ``aiohttp`` 0.21.0.
+  Minimum supported version of ``aiohttp`` is 0.21.4 now.
+
+- New Resources objects are supported.
+  You can specify default configuration for a Resource and use
+  ``allow_methods`` to explicitly list allowed methods (or ``*`` for all
+  HTTP methods):
+
+  .. code-block:: python
+
+        # Allow POST and PUT requests from "http://client.example.org" origin.
+        hello_resource = cors.add(app.router.add_resource("/hello"), {
+                "http://client.example.org":
+                    aiohttp_cors.ResourceOptions(
+                        allow_methods=["POST", "PUT"]),
+            })
+        # No need to add POST and PUT routes into CORS configuration object.
+        hello_resource.add_route("POST", handler_post)
+        hello_resource.add_route("PUT", handler_put)
+        # Still you can add additional methods to CORS configuration object:
+        cors.add(hello_resource.add_route("DELETE", handler_delete))
+
+- ``AbstractRouterAdapter`` was completely rewritten to be more Router
+  agnostic.
 
 0.3.0 (2016-02-06)
 ------------------

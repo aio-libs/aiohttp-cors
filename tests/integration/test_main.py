@@ -568,7 +568,7 @@ class TestMain(AioAiohttpAppTestBase):
 
     @asynctest
     @asyncio.coroutine
-    def test_preflight_request_multiple_routers_with_one_options(self):
+    def test_preflight_request_multiple_routes_with_one_options(self):
         """Test CORS preflight handling on resource that is available through
         several routes.
         """

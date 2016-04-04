@@ -51,12 +51,14 @@ class _ServerDescr:
 class IntegrationServers:
     """Integration servers starting/stopping manager"""
 
-    def __init__(self, *, loop=None):
+    def __init__(self, *, loop=None, use_resources=False):
         self.servers = {}
 
         self.loop = loop
         if self.loop is None:
             self.loop = asyncio.get_event_loop()
+
+        self.use_resources = use_resources
 
         self._logger = logging.getLogger("IntegrationServers")
 
@@ -173,7 +175,17 @@ class IntegrationServers:
         # Add CORS routes.
         for server_name in cors_server_names:
             server_descr = self.servers[server_name]
-            server_descr.cors.add(server_descr.app.router["cors_resource"])
+            # TODO: Starting from aiohttp 0.21.0 name-based access returns
+            # Resource, not Route. Manually get route while aiohttp_cors
+            # doesn't support configuring for Resources.
+            resource = server_descr.app.router["cors_resource"]
+            route = next(iter(resource))
+            if self.use_resources:
+                server_descr.cors.add(resource)
+                server_descr.cors.add(route)
+
+            else:
+                server_descr.cors.add(route)
 
     @asyncio.coroutine
     def stop_servers(self):
@@ -200,7 +212,8 @@ def _get_chrome_driver():
 class TestInBrowser(AioTestBase):
     @asyncio.coroutine
     def _test_in_webdriver(self, driver):
-        servers = IntegrationServers()
+        # TODO: Use pytest's fixtures to test use resources/not use resources.
+        servers = IntegrationServers(use_resources=True)
         yield from servers.start_servers()
 
         def selenium_thread():

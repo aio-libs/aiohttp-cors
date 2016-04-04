@@ -10,7 +10,8 @@ install:
   - python setup.py develop
   # aiohttp git repo has only *.pyx files, so install cython too.
   - '[ -z "$MASTER_AIOHTTP" ] || pip install -U cython git+https://github.com/KeepSafe/aiohttp.git'
-  - '[ -z "$AIOHTTP_0_20_2" ] || pip install aiohttp==0.20.2'
+  # Test on oldest supported aiohttp version.
+  - '[ -z "$OLDEST_AIOHTTP" ] || pip install aiohttp==0.21.4'
 
 script:
   - python setup.py test
@@ -19,11 +20,11 @@ env:
   matrix:
     # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
     # is any non empty string.
-    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  AIOHTTP_0_20_2=
-    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  AIOHTTP_0_20_2=
-    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x AIOHTTP_0_20_2=
-    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x AIOHTTP_0_20_2=
-    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  AIOHTTP_0_20_2=x
-    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  AIOHTTP_0_20_2=x
-    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x AIOHTTP_0_20_2=x
-    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x AIOHTTP_0_20_2=x
+    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=
+    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=
+    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=
+    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=
+    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
+    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
+    - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
+    - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=x

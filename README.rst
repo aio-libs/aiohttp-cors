@@ -126,13 +126,15 @@ from git:
     $ pip install aiohttp_cors
 
 Note that ``aiohttp_cors`` requires versions of Python >= 3.4.1 and
-``aiohttp`` >= 0.18.0.
+``aiohttp`` >= 0.21.4.
 
 Usage
 =====
 
 To use ``aiohttp_cors`` you need to configure the application and
-enable CORS on routes of resources that you want to expose:
+enable CORS on
+`resources and routes <https://aiohttp.readthedocs.org/en/stable/web.html#resources-and-routes>`__
+that you want to expose:
 
 .. code-block:: python
 
@@ -156,10 +158,11 @@ enable CORS on routes of resources that you want to expose:
     cors = aiohttp_cors.setup(app)
 
     # To enable CORS processing for specific route you need to add
-    # that route to the CORS configuration object and specify it's
+    # that route to the CORS configuration object and specify its
     # CORS options.
-    cors.add(
-        app.router.add_route("GET", "/hello", handler), {
+    resource = cors.add(app.router.add_resource("/hello"))
+    route = cors.add(
+        resource.add_route("GET", handler), {
             "http://client.example.org": aiohttp_cors.ResourceOptions(
                 allow_credentials=True,
                 expose_headers=("X-Custom-Server-Header",),
@@ -170,6 +173,7 @@ enable CORS on routes of resources that you want to expose:
 
 Each route has it's own CORS configuration passed in ``CorsConfig.add()``
 method.
+
 CORS configuration is a mapping from origins to options for that origins.
 
 In the example above CORS is configured for the resource under path ``/hello``
@@ -234,22 +238,54 @@ You can specify default CORS-enabled resource options using
             "http://client.example.org": aiohttp_cors.ResourceOptions(),
         })
 
-    # Enable CORS on resources.
+    # Enable CORS on routes.
 
     # According to defaults POST and PUT will be available only to
     # "http://client.example.org".
-    cors.add(app.router.add_route("POST", "/hello", handler_post))
-    cors.add(app.router.add_route("PUT", "/hello", handler_put))
+    hello_resource = cors.add(app.router.add_resource("/hello"))
+    cors.add(hello_resource.add_route("POST", handler_post))
+    cors.add(hello_resource.add_route("PUT", handler_put))
 
-    # In addition to "http://client.example.org", GET request will be allowed
-    # from "http://other-client.example.org" origin.
-    cors.add(app.router.add_route("GET", "/hello", handler), {
-            "http://other-client.example.org"
+    # In addition to "http://client.example.org", GET request will be
+    # allowed from "http://other-client.example.org" origin.
+    cors.add(hello_resource.add_route("GET", handler), {
+            "http://other-client.example.org":
+                aiohttp_cors.ResourceOptions(),
         })
 
     # CORS will be enabled only on the resources added to `CorsConfig`,
     # so following resource will be NOT CORS-enabled.
-    app.router.add_route("GET", "/private", handler))
+    app.router.add_route("GET", "/private", handler)
+
+Also you can specify default options for resources:
+
+.. code-block:: python
+
+    # Allow POST and PUT requests from "http://client.example.org" origin.
+    hello_resource = cors.add(app.router.add_resource("/hello"), {
+            "http://client.example.org": aiohttp_cors.ResourceOptions(),
+        })
+    cors.add(hello_resource.add_route("POST", handler_post))
+    cors.add(hello_resource.add_route("PUT", handler_put))
+
+Resource CORS configuration allows to use ``allow_methods`` option that
+explicitly specifies list of allowed HTTP methods for origin
+(or ``*`` for all HTTP methods).
+By using this option it is not required to add all resource routes to
+CORS configuration object:
+
+.. code-block:: python
+
+    # Allow POST and PUT requests from "http://client.example.org" origin.
+    hello_resource = cors.add(app.router.add_resource("/hello"), {
+            "http://client.example.org":
+                aiohttp_cors.ResourceOptions(allow_methods=["POST", "PUT"]),
+        })
+    # No need to add POST and PUT routes into CORS configuration object.
+    hello_resource.add_route("POST", handler_post)
+    hello_resource.add_route("PUT", handler_put)
+    # Still you can add additional methods to CORS configuration object:
+    cors.add(hello_resource.add_route("DELETE", handler_delete))
 
 Here is an example of how to enable CORS for all origins with all CORS
 features:
@@ -265,14 +301,29 @@ features:
     })
 
     # Add all resources to `CorsConfig`.
-    cors.add(app.router.add_route("GET", "/hello", handler_get))
-    cors.add(app.router.add_route("PUT", "/hello", handler_put))
-    cors.add(app.router.add_route("POST", "/hello", handler_put))
-    cors.add(app.router.add_route("DELETE", "/hello", handler_delete))
+    resource = cors.add(app.router.add_resource("/hello"))
+    cors.add(resource.add_route("GET", handler_get))
+    cors.add(resource.add_route("PUT", handler_put))
+    cors.add(resource.add_route("POST", handler_put))
+    cors.add(resource.add_route("DELETE", handler_delete))
 
+Old routes API is supported — you can use ``router.add_router`` and
+``router.register_route`` as before, though this usage is discouraged:
 
-Also you can enable CORS for all added routes by accessing routes list
-in router:
+.. code-block:: python
+
+    cors.add(
+        app.router.add_route("GET", "/hello", handler), {
+            "http://client.example.org": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers=("X-Custom-Server-Header",),
+                allow_headers=("X-Requested-With", "Content-Type"),
+                max_age=3600,
+            )
+        })
+
+You can enable CORS for all added routes by accessing routes list
+in the router:
 
 .. code-block:: python
 

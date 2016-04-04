@@ -44,43 +44,11 @@ class TestCorsConfig(unittest.TestCase):
     def tearDown(self):
         self.loop.close()
 
-    def test_add_get_route(self):
-        """Test configuring GET route"""
-        result = self.cors.add(self.get_route)
-        self.assertIs(result, self.get_route)
-
-        self.assertEqual(len(self.cors._route_config), 1)
-        self.assertIn(self.get_route, self.cors._route_config)
-
-        self.assertEqual(len(self.cors._preflight_route_settings), 1)
-
     def test_add_options_route(self):
         """Test configuring OPTIONS route"""
 
-        with self.assertRaisesRegex(
-                ValueError,
-                "CORS can't be enabled on route that handles OPTIONS request"):
-            self.cors.add(self.options_route)
-
-        self.assertFalse(self.cors._route_config)
-        self.assertFalse(self.cors._preflight_route_settings)
-
-    def test_add_preflight_route(self):
-        """Test configuring preflight route"""
-
-        self.cors.add(self.get_route)
-        preflight_route = next(iter(
-            self.cors._preflight_route_settings.keys()))
-
-        self.assertEqual(len(self.cors._route_config), 1)
-        self.assertEqual(len(self.cors._preflight_route_settings), 1)
-
-        # TODO: Capture and verify log warning message.
-        result = self.cors.add(preflight_route)
-        self.assertIs(result, preflight_route)
-
-        self.assertEqual(len(self.cors._route_config), 1)
-        self.assertEqual(len(self.cors._preflight_route_settings), 1)
+        with self.assertRaises(RuntimeError):
+            self.cors.add(self.options_route.resource)
 
     def test_plain_named_route(self):
         """Test adding plain named route."""

@@ -14,7 +14,7 @@ install:
 - '[ -z "$OLDEST_AIOHTTP" ] || pip install aiohttp==0.21.4'
 
 script:
-- python setup.py test
+- python setup.py test --addopts -v --addopts -s
 
 env:
   matrix:

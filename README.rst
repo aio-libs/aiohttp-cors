@@ -156,7 +156,7 @@ enable CORS on routes of resources that you want to expose:
     cors = aiohttp_cors.setup(app)
 
     # To enable CORS processing for specific route you need to add
-    # that route to the CORS configuration object and specify it's
+    # that route to the CORS configuration object and specify its
     # CORS options.
     cors.add(
         app.router.add_route("GET", "/hello", handler), {

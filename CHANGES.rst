@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-0.4.0 (2016-XX-XX)
+0.4.0 (2016-04-04)
 ------------------
 
 - Fixed support with new Resources objects introduced in ``aiohttp`` 0.21.0.

@@ -28,3 +28,15 @@ env:
   - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
   - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
   - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
+
+# Deploy on PyPI all tagged build on master branch.
+deploy:
+  provider: pypi
+  user: aiohttp-cors-deploy
+  password:
+    secure: KViGT/W2vWRWZkV5bZYLiI3v/qXVRGEFAs8G1OMx/OhLvHTj8vO6pZ+hlzLi9zTnBTVHG2xEOrwtjiuHxpJMcDPAul3rn0fwSXy9BRDAeR7B7RIlvLxegMRTnWtsj5x8/VkqQDrPW5YWmuXFb4tDJ+LEkadUrkF9YhJvtUnSQcEOOHVvJa4DekMhZEVM8AKA+7AT9FibWZbJ5s8bTjLke77/eyX7+1DdgC7G++ZesK2HKS1vlM7fN+cWPyUFofXwcEc42rwQwJ5FY2saqTvPN5GBOMpXdaBUmSyYT64447TVFoINbAFuCa3tUeY7ZQpC6B8bHVqEGq+UAujUGU7uhid29CHV03PTFeupTZRscVDkL+IEUjK6Ft+x/B9eStVpKh9d5Yh8INZkdoHVmybJo62k/YHwxAu7ftG+q1bUAHwgKkukXa+ZpmSD2v6BggVUBS6qFwv6tnKpuI0jRsneEUXPmJVUHpv6lPzVRPW/lQDZqxUvESz9w9mitwBiMA7q8jyL9w4zJVKAETjo6llWGQ2wOLjaz3LwuQ8vDOKfWOdvk78W8Usw5amkp2invyidU/2+Y1hlekRuhaMEaUdd4GPmP8beOh7CEXJr5bD3QjbqOpOMi+d+3rYVR0NZMWxawgtUGMBb/8DUNq4sD4Na5G3sGSy+rHMtDAuMOOUlLoU=
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
+    branch: master
+    condition: $TRAVIS_PYTHON_VERSION = "3.5"

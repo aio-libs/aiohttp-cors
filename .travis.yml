@@ -26,7 +26,8 @@ before_script:
   - sleep 3 # give xvfb some time to start
 
 script:
-- python setup.py test --addopts -v --addopts -s
+- '[ $TYPE != "test" ] || python setup.py test --addopts -v --addopts -s'
+- '[ $TYPE != "list" ] || python setup.py check'
 
 env:
   global:
@@ -34,20 +35,23 @@ env:
   matrix:
   # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
   # is any non empty string.
-  - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=
-  - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=
-  - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=
-  - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=
-  - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
-  - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
-  - PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
-  - PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
+  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=
+  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=
+  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=
+  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=
+  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
+  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
+  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
+  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
 
 matrix:
   include:
   # Environment to deploy project on PyPI.
   - python: "3.5"
     env: DEPLOY_ENV=1
+
+  - python: "3.5"
+    env: TYPE=lint
 
 # Deploy on PyPI all tagged build on master branch.
 deploy:

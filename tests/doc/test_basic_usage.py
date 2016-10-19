@@ -55,6 +55,8 @@ class TestBasicUsage(unittest.TestCase):
                 )
             })
 
+        assert route is not None
+
     def test_defaults(self):
         # This tests corresponds to example from documentation.
         # If you updating it, don't forget to update documentation.
@@ -96,7 +98,7 @@ class TestBasicUsage(unittest.TestCase):
         # allowed from "http://other-client.example.org" origin.
         cors.add(hello_resource.add_route("GET", handler), {
                 "http://other-client.example.org":
-                    aiohttp_cors.ResourceOptions(),
+                aiohttp_cors.ResourceOptions(),
             })
 
         # CORS will be enabled only on the resources added to `CorsConfig`,

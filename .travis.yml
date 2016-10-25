@@ -27,7 +27,7 @@ before_script:
 
 script:
 - '[ $TYPE != "test" ] || python setup.py test --addopts -v --addopts -s'
-- '[ $TYPE != "list" ] || python setup.py check'
+- '[ $TYPE != "lint" ] || python setup.py check'
 
 env:
   global:

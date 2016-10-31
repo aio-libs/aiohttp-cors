@@ -121,7 +121,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
     def add_preflight_handler(
             self,
-            routing_entity: Union[web.Resource, web.ResourceRoute],
+            routing_entity: Union[web.AbstractResource, web.ResourceRoute],
             handler):
         """Add OPTIONS handler for all routes defined by `routing_entity`.
 
@@ -129,7 +129,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         Should fail if there are conflicting user-defined OPTIONS handlers.
         """
 
-        if isinstance(routing_entity, web.Resource):
+        if isinstance(routing_entity, web.AbstractResource):
             resource = routing_entity
 
             # Add preflight handler for Resource, if not yet added.
@@ -158,7 +158,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                 "Resource or ResourceRoute expected, got {!r}".format(
                     routing_entity))
 
-    def is_cors_for_resource(self, resource: web.Resource) -> bool:
+    def is_cors_for_resource(self, resource: web.AbstractResource) -> bool:
         """Is CORS is configured for the resource"""
         return resource in self._resources_with_preflight_handlers
 
@@ -167,7 +167,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         assert isinstance(match_info, web.UrlMappingMatchInfo)
         return match_info.route
 
-    def _request_resource(self, request: web.Request) -> web.Resource:
+    def _request_resource(self, request: web.Request) -> web.AbstractResource:
         return self._request_route(request).resource
 
     def is_preflight_request(self, request: web.Request) -> bool:
@@ -182,11 +182,11 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
     def set_config_for_routing_entity(
             self,
-            routing_entity: Union[web.Resource, web.ResourceRoute],
+            routing_entity: Union[web.AbstractResource, web.ResourceRoute],
             config):
         """Record configuration for resource or it's route."""
 
-        if isinstance(routing_entity, web.Resource):
+        if isinstance(routing_entity, web.AbstractResource):
             resource = routing_entity
 
             # Add resource configuration or fail if it's already added.

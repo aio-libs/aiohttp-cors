@@ -389,7 +389,7 @@ class CorsConfig:
         else:
             # UrlDispatcher.
 
-            if isinstance(routing_entity, web.AbstractResource):
+            if isinstance(routing_entity, web.Resource):
                 # New Resource - use new router adapter.
                 return self._resources_cors_impl.add(routing_entity, config)
 

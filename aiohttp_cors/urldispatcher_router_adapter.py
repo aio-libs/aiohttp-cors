@@ -408,9 +408,10 @@ class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             requested_method: str):
         assert self.is_preflight_request(preflight_request)
 
+        request = preflight_request.clone(method=requested_method)
         for route, config in self._route_config.items():
             match_info, allowed_methods = yield from route.resource.resolve(
-                preflight_request)
+                request)
             if match_info is not None:
                 return collections.ChainMap(config, self._default_config)
         else:

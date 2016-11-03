@@ -121,7 +121,8 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
     def add_preflight_handler(
             self,
-            routing_entity: Union[web.Resource, web.ResourceRoute],
+            routing_entity: Union[web.Resource, web.StaticResource,
+                                  web.ResourceRoute],
             handler):
         """Add OPTIONS handler for all routes defined by `routing_entity`.
 
@@ -139,6 +140,19 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                 return
 
             preflight_route = resource.add_route(hdrs.METH_OPTIONS, handler)
+            self._preflight_routes.add(preflight_route)
+            self._resources_with_preflight_handlers.add(resource)
+
+        elif isinstance(routing_entity, web.StaticResource):
+            resource = routing_entity
+
+            # Add preflight handler for Resource, if not yet added.
+
+            if resource in self._resources_with_preflight_handlers:
+                # Preflight handler already added for this resource.
+                return
+
+            preflight_route = resource.set_options_route(handler)
             self._preflight_routes.add(preflight_route)
             self._resources_with_preflight_handlers.add(resource)
 
@@ -182,11 +196,12 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
     def set_config_for_routing_entity(
             self,
-            routing_entity: Union[web.Resource, web.ResourceRoute],
+            routing_entity: Union[web.Resource, web.StaticResource,
+                                  web.ResourceRoute],
             config):
         """Record configuration for resource or it's route."""
 
-        if isinstance(routing_entity, web.Resource):
+        if isinstance(routing_entity, (web.Resource, web.StaticResource)):
             resource = routing_entity
 
             # Add resource configuration or fail if it's already added.
@@ -393,11 +408,9 @@ class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             requested_method: str):
         assert self.is_preflight_request(preflight_request)
 
-        # TODO: Test difference between request.raw_path and request.path.
-        path = preflight_request.path
         for route, config in self._route_config.items():
             match_info, allowed_methods = yield from route.resource.resolve(
-                requested_method, path)
+                preflight_request)
             if match_info is not None:
                 return collections.ChainMap(config, self._default_config)
         else:

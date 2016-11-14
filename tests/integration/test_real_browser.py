@@ -18,6 +18,7 @@
 import os
 import json
 import asyncio
+import socket
 import unittest
 import pathlib
 import logging
@@ -111,9 +112,20 @@ class IntegrationServers:
             assert server_name not in self.servers
             self.servers[server_name] = _ServerDescr()
 
-        # Create applications.
-        for server_descr in self.servers.values():
+        server_sockets = {}
+
+        # Create applications and sockets.
+        for server_name, server_descr in self.servers.items():
             server_descr.app = web.Application()
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("127.0.0.1", 0))
+            sock.listen(10)
+            server_sockets[server_name] = sock
+
+            hostaddr, port = sock.getsockname()
+            server_descr.url = "http://{host}:{port}".format(
+                host=hostaddr, port=port)
 
         # Server test page from origin server.
         self.servers["origin"].app.router.add_route(
@@ -127,20 +139,6 @@ class IntegrationServers:
             app.router.add_route("GET", "/no_cors.json", handle_no_cors)
             app.router.add_route("GET", "/cors_resource", handle_resource,
                                  name="cors_resource")
-
-        # Start servers.
-        for server_name, server_descr in self.servers.items():
-            handler = server_descr.app.make_handler()
-            server = yield from create_server(handler, self.loop)
-            server_descr.handler = handler
-            server_descr.server = server
-
-            hostaddr, port = server.sockets[0].getsockname()
-            server_descr.url = "http://{host}:{port}".format(
-                host=hostaddr, port=port)
-
-            self._logger.info("Started server '%s' at '%s'",
-                              server_name, server_descr.url)
 
         cors_default_configs = {
             "allowing": {
@@ -186,6 +184,17 @@ class IntegrationServers:
 
             else:
                 server_descr.cors.add(route)
+
+        # Start servers.
+        for server_name, server_descr in self.servers.items():
+            handler = server_descr.app.make_handler()
+            server = yield from create_server(handler, self.loop,
+                                              sock=server_sockets[server_name])
+            server_descr.handler = handler
+            server_descr.server = server
+
+            self._logger.info("Started server '%s' at '%s'",
+                              server_name, server_descr.url)
 
     @asyncio.coroutine
     def stop_servers(self):

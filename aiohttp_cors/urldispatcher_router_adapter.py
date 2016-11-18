@@ -152,7 +152,8 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                 # Preflight handler already added for this resource.
                 return
 
-            preflight_route = resource.set_options_route(handler)
+            resource.set_options_route(handler)
+            preflight_route = resource._routes[hdrs.METH_OPTIONS]
             self._preflight_routes.add(preflight_route)
             self._resources_with_preflight_handlers.add(resource)
 

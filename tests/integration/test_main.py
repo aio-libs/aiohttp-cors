@@ -16,6 +16,9 @@
 """
 
 import asyncio
+import pathlib
+
+from yarl import URL
 
 from tests.aio_test_base import AioTestBase, create_server, asynctest
 
@@ -801,6 +804,38 @@ class TestMain(AioAiohttpAppTestBase):
         self.assertIn(
             "headers are not allowed: TEST",
             (yield from response.text()))
+
+    @asynctest
+    @asyncio.coroutine
+    def test_static_route(self):
+        """Test a static route with CORS."""
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_methods="*",
+                allow_headers=("Content-Type", "X-Header"),
+            )
+        })
+
+        test_static_path = pathlib.Path(__file__).parent
+        cors.add(app.router.add_static("/static", test_static_path, name='static'))
+
+        yield from self.create_server(app)
+
+        response = yield from aiohttp.request(
+            "OPTIONS", URL(self.server_url) / "static/test_page.html",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "OPTIONS",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+            }
+        )
+        data = yield from response.text()
+        self.assertEqual(response.status, 200)
+        self.assertEqual(data, '')
+
 
 # TODO: test requesting resources with not configured CORS.
 # TODO: test wildcard origin in default config.

@@ -16,8 +16,6 @@ install:
 - python setup.py develop
 # aiohttp git repo has only *.pyx files, so install cython too.
 - '[ -z "$MASTER_AIOHTTP" ] || pip install -U cython git+https://github.com/KeepSafe/aiohttp.git'
-# Test on oldest supported aiohttp version.
-- '[ -z "$OLDEST_AIOHTTP" ] || pip install aiohttp==0.21.4'
 
 before_script:
   # Start X-server for Selenium tests.
@@ -35,14 +33,10 @@ env:
   matrix:
   # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
   # is any non empty string.
-  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=
-  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=
-  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=
-  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=
-  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
-  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=  OLDEST_AIOHTTP=x
-  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
-  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x OLDEST_AIOHTTP=x
+  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=
+  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=
+  - TYPE=test PYTHONASYNCIODEBUG=  MASTER_AIOHTTP=x
+  - TYPE=test PYTHONASYNCIODEBUG=x MASTER_AIOHTTP=x
 
 matrix:
   include:

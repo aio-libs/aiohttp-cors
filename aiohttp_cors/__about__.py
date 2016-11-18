@@ -19,10 +19,10 @@ This module must be stand-alone executable.
 """
 
 __title__ = "aiohttp-cors"
-__version__ = "0.5.0a0"
+__version__ = "0.5.0"
 __author__ = "Vladimir Rutsky"
 __email__ = "vladimir@rutsky.org"
 __summary__ = "CORS support for aiohttp"
 __uri__ = "https://github.com/aio-libs/aiohttp-cors"
 __license__ = "Apache License, Version 2.0"
-__copyright__ = "2015 {}".format(__author__)
+__copyright__ = "2015, 2016 {}".format(__author__)

@@ -77,3 +77,14 @@ class TestCorsConfig(unittest.TestCase):
         self.assertEqual(len(self.app.router.keys()), 1)
         self.cors.add(route)
         self.assertEqual(len(self.app.router.keys()), 1)
+
+    def test_static_resource(self):
+        """Test adding static resource."""
+        self.assertEqual(len(self.app.router.keys()), 0)
+        self.app.router.add_static(
+            "/file", "/", name="dynamic_named_route")
+        self.assertEqual(len(self.app.router.keys()), 1)
+        for resource in list(self.app.router.resources()):
+            if issubclass(resource, web.StaticResource):
+                self.cors.add(resource)
+        self.assertEqual(len(self.app.router.keys()), 1)

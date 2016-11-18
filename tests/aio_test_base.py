@@ -23,12 +23,13 @@ import concurrent.futures
 
 
 @asyncio.coroutine
-def create_server(protocol_factory, loop=None):
+def create_server(protocol_factory, loop=None, sock=None):
     """Create server listening on random port"""
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(("127.0.0.1", 0))
-    sock.listen(10)
+    if sock is None:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(("127.0.0.1", 0))
+        sock.listen(10)
 
     if loop is None:
         loop = asyncio.get_event_loop()

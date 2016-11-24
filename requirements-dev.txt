@@ -1,10 +1,10 @@
-tox==2.4.1
-pytest==3.0.3
+tox==2.5.0
+pytest==3.0.4
 pytest-cov==2.4.0
 pytest-runner==2.9
 pytest-flakes==1.0.1
 pytest-pylint==0.6.0
-flake8==3.0.4
+flake8==3.2.1
 selenium==3.0.1
 docutils==0.12
 pygments==2.1.3

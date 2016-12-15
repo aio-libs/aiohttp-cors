@@ -44,7 +44,7 @@ def setup(app: web.Application, *,
     To enable CORS for a resource you need to explicitly add route for
     that resource using `CorsConfig.add()` method::
 
-        app = aiohttp.web.Application(
+        app = aiohttp.web.Application()
         cors = aiohttp_cors.setup(app)
         cors.add(
             app.router.add_route("GET", "/resource", handler),

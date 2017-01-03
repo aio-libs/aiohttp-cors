@@ -3,6 +3,7 @@ dist: trusty
 python:
 - 3.4
 - 3.5
+- 3.6
 
 # TODO: Use Travis apt addon, when chromium-chromedriver will be supported
 # three: https://github.com/travis-ci/apt-package-whitelist/issues/574

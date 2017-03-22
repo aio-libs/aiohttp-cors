@@ -1,10 +1,16 @@
 CHANGES
 =======
 
+0.5.1 (2017-03-23)
+------------------
+
+- Enforce ``aiohttp`` version to be less than 2.0.
+  Newer ``aiohttp`` releases will be supported in the next release.
+
 0.5.0 (2016-11-18)
 ------------------
 
-- Fix compatibility with aiohttp 1.1
+- Fix compatibility with ``aiohttp`` 1.1
 
 
 0.4.0 (2016-04-04)

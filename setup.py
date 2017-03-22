@@ -65,7 +65,7 @@ setup(
     ],
     test_suite="tests",
     install_requires=[
-        "aiohttp>=1.1",
+        "aiohttp>=1.1,<2.0",
     ],
     extras_require={
         # TODO: Rich comparison in environment markers are broken in

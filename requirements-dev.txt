@@ -5,7 +5,7 @@ pytest-runner==2.11.1
 pytest-flakes==1.0.1
 pytest-pylint==0.7.0
 flake8==3.3.0
-selenium==3.3.0
+selenium==3.3.1
 docutils==0.13.1
 pygments==2.2.0
 -e .

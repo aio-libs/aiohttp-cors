@@ -13,9 +13,9 @@ before_install:
 
 install:
 - pip install --upgrade pip setuptools wheel
-- pip install -Ur requirements-dev.txt
 # aiohttp git repo has only *.pyx files, so install cython too.
 - '[ -z "$MASTER_AIOHTTP" ] || pip install -U cython git+https://github.com/KeepSafe/aiohttp.git'
+- pip install -Ur requirements-dev.txt
 
 before_script:
   # Start X-server for Selenium tests.

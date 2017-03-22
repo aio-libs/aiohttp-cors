@@ -24,8 +24,8 @@ before_script:
   - sleep 3 # give xvfb some time to start
 
 script:
-- '[ $TYPE != "test" ] || python setup.py test --addopts -v --addopts -s'
-- '[ $TYPE != "lint" ] || python setup.py check'
+- '[ "$TYPE" != "test" ] || python setup.py test --addopts -v --addopts -s'
+- '[ "$TYPE" != "lint" ] || python setup.py check'
 
 env:
   global:

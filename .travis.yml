@@ -14,7 +14,6 @@ before_install:
 install:
 - pip install --upgrade pip setuptools wheel
 - pip install -Ur requirements-dev.txt
-- python setup.py develop
 # aiohttp git repo has only *.pyx files, so install cython too.
 - '[ -z "$MASTER_AIOHTTP" ] || pip install -U cython git+https://github.com/KeepSafe/aiohttp.git'
 

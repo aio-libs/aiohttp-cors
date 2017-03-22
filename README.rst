@@ -401,18 +401,6 @@ To run Selenium tests with Chromium web driver you need to:
 Release process
 ---------------
 
-Prerequisites:
-
-1. Install fresh versions of setuptools and pip.
-   Install ``wheel`` for building wheels.
-   Install ``twine`` for uploading to PyPI.
-
-   .. code-block:: bash
-
-      pip install -U pip setuptools twine wheel
-
-2. Configure PyPI credentials in ``~/.pypirc``.
-
 To release version ``vA.B.C`` from the current version of ``master`` branch
 you need to:
 
@@ -424,28 +412,44 @@ you need to:
    successfully finish (Travis and Appveyor).
 5. Merge pull request to master.
 6. Update and checkout ``master`` branch.
-7. Build distribution:
 
-   .. code-block:: bash
-
-      rm -rf build dist; python setup.py sdist bdist_wheel
-
-8. Upload new release to PyPI:
-
-   .. code-block:: bash
-
-      twine upload dist/*
-
-9. Create and push tag for release version to GitHub:
+7. Create and push tag for release version to GitHub:
 
    .. code-block:: bash
 
       git tag vA.B.C
       git push --tags
 
-10. Edit release description on GitHub if needed.
-11. Announce new release on the *aio-libs* mailing list:
-    https://groups.google.com/forum/#!forum/aio-libs.
+   Now Travis should ran tests again, and build and deploy wheel on PyPI.
+
+   If Travis release doesn't work for some reason, use following steps
+   for manual release upload.
+
+   1. Install fresh versions of setuptools and pip.
+      Install ``wheel`` for building wheels.
+      Install ``twine`` for uploading to PyPI.
+
+      .. code-block:: bash
+
+         pip install -U pip setuptools twine wheel
+
+   2. Configure PyPI credentials in ``~/.pypirc``.
+
+   3. Build distribution:
+
+      .. code-block:: bash
+
+         rm -rf build dist; python setup.py sdist bdist_wheel
+
+   4. Upload new release to PyPI:
+
+      .. code-block:: bash
+
+         twine upload dist/*
+
+8. Edit release description on GitHub if needed.
+9. Announce new release on the *aio-libs* mailing list:
+   https://groups.google.com/forum/#!forum/aio-libs.
 
 Post release steps:
 

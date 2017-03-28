@@ -202,7 +202,7 @@ class IntegrationServers:
             server_descr.server.close()
             yield from server_descr.handler.finish_connections()
             yield from server_descr.server.wait_closed()
-            yield from server_descr.app.finish()
+            yield from server_descr.app.cleanup()
 
         self.servers = {}
 

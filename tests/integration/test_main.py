@@ -61,7 +61,11 @@ class AioAiohttpAppTestBase(AioTestBase):
 
         self.server = None
 
+        self.session = aiohttp.ClientSession()
+
     def tearDown(self):
+        self.session.close()
+
         if self.server is not None:
             self.loop.run_until_complete(self.shutdown_server())
 
@@ -96,7 +100,7 @@ class AioAiohttpAppTestBase(AioTestBase):
         self.server.close()
         yield from self.handler.finish_connections()
         yield from self.server.wait_closed()
-        yield from self.app.finish()
+        yield from self.app.cleanup()
 
         self.server = None
         self.app = None
@@ -117,7 +121,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request("GET", self.server_url)
+        response = yield from self.session.request("GET", self.server_url)
         self.assertEqual(response.status, 200)
         data = yield from response.text()
 
@@ -143,7 +147,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request("GET", self.server_url)
+        response = yield from self.session.request("GET", self.server_url)
         self.assertEqual(response.status, 200)
         data = yield from response.text()
 
@@ -160,7 +164,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request("GET", self.server_url)
+        response = yield from self.session.request("GET", self.server_url)
         self.assertEqual(response.status, 200)
         data = yield from response.text()
 
@@ -178,7 +182,7 @@ class TestMain(AioAiohttpAppTestBase):
         def run_test(test):
             """Run single test"""
 
-            response = yield from aiohttp.get(
+            response = yield from self.session.get(
                 self.server_url + "resource",
                 headers=test.get("request_headers", {}))
             self.assertEqual(response.status, 200)
@@ -448,7 +452,7 @@ class TestMain(AioAiohttpAppTestBase):
         def run_test(test):
             """Run single test"""
 
-            response = yield from aiohttp.options(
+            response = yield from self.session.options(
                 self.server_url + "resource",
                 headers=test.get("request_headers", {}))
             self.assertEqual(response.status, test.get("response_status", 200))
@@ -627,7 +631,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -660,7 +664,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -689,7 +693,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -705,7 +709,7 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
             "content-type".upper())
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -722,7 +726,7 @@ class TestMain(AioAiohttpAppTestBase):
             {"X-Header".upper(), "content-type".upper()})
         self.assertEqual((yield from response.text()), "")
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -756,7 +760,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -772,7 +776,7 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
             "content-type".upper())
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -789,7 +793,7 @@ class TestMain(AioAiohttpAppTestBase):
             {"X-Header".upper(), "content-type".upper()})
         self.assertEqual((yield from response.text()), "")
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -824,7 +828,7 @@ class TestMain(AioAiohttpAppTestBase):
 
         yield from self.create_server(app)
 
-        response = yield from aiohttp.request(
+        response = yield from self.session.request(
             "OPTIONS", URL(self.server_url) / "static/test_page.html",
             headers={
                 hdrs.ORIGIN: "http://example.org",

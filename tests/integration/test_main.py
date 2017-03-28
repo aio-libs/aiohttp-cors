@@ -61,7 +61,7 @@ class AioAiohttpAppTestBase(AioTestBase):
 
         self.server = None
 
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(loop=self.loop)
 
     def tearDown(self):
         self.session.close()

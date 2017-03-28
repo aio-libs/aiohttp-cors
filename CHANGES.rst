@@ -1,8 +1,11 @@
 CHANGES
 =======
 
-0.6.0 (2017-XX-XX)
+0.5.2 (2017-03-28)
 ------------------
+
+- Fix tests compatibility with ``aiohttp`` 2.0.
+  This release and release v0.5.0 should work on ``aiohttp`` 2.0.
 
 
 0.5.1 (2017-03-23)

@@ -53,7 +53,8 @@ setup(
         # Setuptools fixed environment markers (":python_version < '3.5'")
         # in 17.1, and pip in 6.
         # TODO: Doesn't work due to
-        # <https://bitbucket.org/pypa/setuptools/issues/141/setup_requires-feature-does-not-handle>
+        # <https://github.com/pypa/setuptools/issues/141>
+        # which were fixed in setuptools 19.4 (released 2016-01-16)
         # "pip>=6",
         # "setuptools>=17.1",
     ] + pytest_runner,

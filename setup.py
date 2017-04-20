@@ -66,13 +66,8 @@ setup(
     test_suite="tests",
     install_requires=[
         "aiohttp>=1.1",
+        "typing;python_version<'3.5'",
     ],
-    extras_require={
-        # TODO: Rich comparison in environment markers are broken in
-        # setuptools<17.1 and pip<6.
-        # ":python_version < '3.5'": ["typing"],
-        ":python_version == '3.4'": ["typing"],
-    },
     license=about["__license__"],
     classifiers=[
         "License :: OSI Approved :: Apache Software License",

@@ -1,7 +1,7 @@
 CHANGES
 =======
 
-0.5.3 (XXXX-XX-XX)
+0.5.3 (2017-04-21)
 ------------------
 
 - Fix `typing` being installed on Python 3.6.

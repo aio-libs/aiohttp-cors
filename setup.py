@@ -50,13 +50,12 @@ setup(
     )),
     packages=["aiohttp_cors"],
     setup_requires=[
-        # Setuptools fixed environment markers (":python_version < '3.5'")
-        # in 17.1, and pip in 6.
-        # TODO: Doesn't work due to
+        # Environment markers were implemented and stabilized in setuptools
+        # v20.8.1 (see <http://stackoverflow.com/a/32643122/391865>).
+        "setuptools>=20.8.1",
+        # If line above doesn't work, check that you have at least
+        # setuptools v19.4 (released 2016-01-16):
         # <https://github.com/pypa/setuptools/issues/141>
-        # which were fixed in setuptools 19.4 (released 2016-01-16)
-        # "pip>=6",
-        # "setuptools>=17.1",
     ] + pytest_runner,
     tests_require=[
         "pytest",
@@ -67,13 +66,8 @@ setup(
     test_suite="tests",
     install_requires=[
         "aiohttp>=1.1",
+        "typing;python_version<'3.5'",
     ],
-    extras_require={
-        # TODO: Rich comparison in environment markers are broken in
-        # setuptools<17.1 and pip<6.
-        # ":python_version < '3.5'": ["typing"],
-        ":python_version == '3.4'": ["typing"],
-    },
     license=about["__license__"],
     classifiers=[
         "License :: OSI Approved :: Apache Software License",

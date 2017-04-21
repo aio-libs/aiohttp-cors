@@ -25,6 +25,7 @@ install:
   - "powershell ./install_python_and_pip.ps1"
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python --version"
+  - "pip install -U pip setuptools wheel"
   - "pip list"
   - "pip install -r requirements-dev.txt"
   - "python setup.py develop"

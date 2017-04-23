@@ -126,7 +126,7 @@ from git:
     $ pip install aiohttp_cors
 
 Note that ``aiohttp_cors`` requires versions of Python >= 3.4.1 and
-``aiohttp`` >= 0.21.4.
+``aiohttp`` >= 1.1.
 
 Usage
 =====

@@ -98,7 +98,7 @@ class AioAiohttpAppTestBase(AioTestBase):
         assert self.server is not None
 
         self.server.close()
-        yield from self.handler.finish_connections()
+        yield from self.handler.shutdown()
         yield from self.server.wait_closed()
         yield from self.app.cleanup()
 

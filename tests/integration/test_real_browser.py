@@ -200,7 +200,7 @@ class IntegrationServers:
     def stop_servers(self):
         for server_descr in self.servers.values():
             server_descr.server.close()
-            yield from server_descr.handler.finish_connections()
+            yield from server_descr.handler.shutdown()
             yield from server_descr.server.wait_closed()
             yield from server_descr.app.cleanup()
 

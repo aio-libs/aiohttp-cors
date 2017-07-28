@@ -48,3 +48,5 @@ docs/_build/
 
 # PyBuilder
 target/
+
+geckodriver.log

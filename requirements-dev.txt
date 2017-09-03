@@ -1,7 +1,7 @@
 tox==2.7.0
 pytest==3.2.1
 pytest-cov==2.5.1
-pytest-runner==2.11.1
+pytest-runner==2.12
 pytest-flakes==2.0.0
 pytest-pylint==0.7.1
 flake8==3.4.1

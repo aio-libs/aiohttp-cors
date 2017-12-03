@@ -824,7 +824,8 @@ class TestMain(AioAiohttpAppTestBase):
         })
 
         test_static_path = pathlib.Path(__file__).parent
-        cors.add(app.router.add_static("/static", test_static_path, name='static'))
+        cors.add(app.router.add_static("/static", test_static_path,
+                                       name='static'))
 
         yield from self.create_server(app)
 

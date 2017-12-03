@@ -5,7 +5,7 @@ pytest-cov==2.5.1
 pytest-runner==2.12.1
 pytest-flakes==2.0.0
 pytest-pylint==0.7.1
-flake8==3.4.1
+flake8==3.5.0
 selenium==3.6.0
 docutils==0.14
 pygments==2.2.0

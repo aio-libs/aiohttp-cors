@@ -20,11 +20,18 @@ import unittest
 
 from aiohttp import web
 
-from aiohttp_cors import CorsConfig, ResourceOptions
+from aiohttp_cors import CorsConfig, ResourceOptions, CorsViewMixin
 
 
 def _handler(request):
     return web.Response(text="Done")
+
+
+class _View(web.View, CorsViewMixin):
+
+    @asyncio.coroutine
+    def get(self):
+        return web.Response(text="Done")
 
 
 class TestCorsConfig(unittest.TestCase):
@@ -87,4 +94,13 @@ class TestCorsConfig(unittest.TestCase):
         for resource in list(self.app.router.resources()):
             if issubclass(resource, web.StaticResource):
                 self.cors.add(resource)
+        self.assertEqual(len(self.app.router.keys()), 1)
+
+    def test_web_view_resource(self):
+        """Test adding resource with web.View as handler"""
+        self.assertEqual(len(self.app.router.keys()), 0)
+        route = self.app.router.add_route(
+            "GET", "/{name}", _View, name="dynamic_named_route")
+        self.assertEqual(len(self.app.router.keys()), 1)
+        self.cors.add(route)
         self.assertEqual(len(self.app.router.keys()), 1)

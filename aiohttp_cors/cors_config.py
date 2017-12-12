@@ -118,7 +118,8 @@ class _CorsConfigImpl:
 
     def add(self,
             routing_entity,
-            config: _ConfigType=None):
+            config: _ConfigType=None,
+            webview: bool=False):
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.
@@ -133,9 +134,9 @@ class _CorsConfigImpl:
         parsed_config = _parse_config_options(config)
 
         self._router_adapter.add_preflight_handler(
-            routing_entity, self._preflight_handler)
+            routing_entity, self._preflight_handler, webview=webview)
         self._router_adapter.set_config_for_routing_entity(
-            routing_entity, parsed_config)
+            routing_entity, parsed_config, webview=webview)
 
         return routing_entity
 
@@ -341,7 +342,7 @@ class CorsConfig:
             Router adapter. Required if application uses non-default router.
         """
 
-        defaults = _parse_config_options(defaults)
+        self.defaults = _parse_config_options(defaults)
 
         self._cors_impl = None
 
@@ -355,13 +356,13 @@ class CorsConfig:
 
         elif isinstance(app.router, web.UrlDispatcher):
             self._resources_router_adapter = \
-                ResourcesUrlDispatcherRouterAdapter(app.router, defaults)
+                ResourcesUrlDispatcherRouterAdapter(app.router, self.defaults)
             self._resources_cors_impl = _CorsConfigImpl(
                 app,
                 self._resources_router_adapter)
             self._old_routes_cors_impl = _CorsConfigImpl(
                 app,
-                OldRoutesUrlDispatcherRouterAdapter(app.router, defaults))
+                OldRoutesUrlDispatcherRouterAdapter(app.router, self.defaults))
         else:
             raise RuntimeError(
                 "Router adapter is not specified. "
@@ -370,7 +371,8 @@ class CorsConfig:
 
     def add(self,
             routing_entity,
-            config: _ConfigType = None):
+            config: _ConfigType = None,
+            webview: bool=False):
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.
@@ -404,7 +406,7 @@ class CorsConfig:
                     # Route which resource has no CORS configuration, i.e.
                     # old-style route.
                     return self._old_routes_cors_impl.add(
-                        routing_entity, config)
+                        routing_entity, config, webview=webview)
 
             else:
                 raise ValueError(

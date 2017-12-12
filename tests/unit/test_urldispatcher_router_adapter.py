@@ -72,15 +72,13 @@ class TestResourcesUrlDispatcherRouterAdapter(unittest.TestCase):
         self.assertFalse(self.adapter._preflight_routes)
 
     def test_get_non_preflight_request_config(self):
-        self.adapter.add_preflight_handler(
-            self.get_route.resource, _handler)
+        self.adapter.add_preflight_handler(self.get_route.resource, _handler)
         self.adapter.set_config_for_routing_entity(
             self.get_route.resource, {
                 'http://example.org': ResourceOptions(),
             })
 
-        self.adapter.add_preflight_handler(
-            self.get_route, _handler)
+        self.adapter.add_preflight_handler(self.get_route, _handler)
         self.adapter.set_config_for_routing_entity(
             self.get_route, {
                 'http://test.example.org': ResourceOptions(),

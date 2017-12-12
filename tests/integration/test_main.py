@@ -26,7 +26,7 @@ import aiohttp
 from aiohttp import web
 from aiohttp import hdrs
 
-from aiohttp_cors import setup, ResourceOptions
+from aiohttp_cors import setup, ResourceOptions, CorsViewMixin
 
 
 TEST_BODY = "Hello, world"
@@ -43,6 +43,19 @@ def handler(request: web.Request) -> web.StreamResponse:
     response.headers[SERVER_CUSTOM_HEADER_NAME] = SERVER_CUSTOM_HEADER_VALUE
 
     return response
+
+
+class WebViewHandler(web.View, CorsViewMixin):
+
+    @asyncio.coroutine
+    def get(self) -> web.StreamResponse:
+        """Dummy request handler, returning `TEST_BODY`."""
+        response = web.Response(text=TEST_BODY)
+
+        response.headers[SERVER_CUSTOM_HEADER_NAME] = \
+            SERVER_CUSTOM_HEADER_VALUE
+
+        return response
 
 
 class AioAiohttpAppTestBase(AioTestBase):
@@ -173,7 +186,8 @@ class TestMain(AioAiohttpAppTestBase):
     @asyncio.coroutine
     def _run_simple_requests_tests(self,
                                    tests_descriptions,
-                                   use_resources):
+                                   use_resources,
+                                   use_webview):
         """Runs CORS simple requests (without a preflight request) based
         on the passed tests descriptions.
         """
@@ -207,7 +221,11 @@ class TestMain(AioAiohttpAppTestBase):
                     resource = cors.add(app.router.add_resource("/resource"))
                     cors.add(resource.add_route("GET", handler),
                              test_descr["route_config"])
-
+                elif use_webview:
+                    WebViewHandler.cors_config = test_descr["route_config"]
+                    cors.add(
+                        app.router.add_route("*", "/resource", WebViewHandler),
+                        webview=True)
                 else:
                     cors.add(
                         app.router.add_route("GET", "/resource", handler),
@@ -309,8 +327,12 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(tests_descriptions, False)
-        yield from self._run_simple_requests_tests(tests_descriptions, True)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, False, False)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, True, False)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, False, True)
 
     @asynctest
     @asyncio.coroutine
@@ -381,8 +403,12 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(tests_descriptions, False)
-        yield from self._run_simple_requests_tests(tests_descriptions, True)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, False, False)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, True, False)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, False, True)
 
     @asynctest
     @asyncio.coroutine
@@ -439,12 +465,18 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(tests_descriptions, False)
-        yield from self._run_simple_requests_tests(tests_descriptions, True)
-        yield from self._run_simple_requests_tests(tests_descriptions, True)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, False, False)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, True, False)
+        yield from self._run_simple_requests_tests(
+            tests_descriptions, False, True)
 
     @asyncio.coroutine
-    def _run_preflight_requests_tests(self, tests_descriptions, use_resources):
+    def _run_preflight_requests_tests(self,
+                                      tests_descriptions,
+                                      use_resources,
+                                      use_webview):
         """Runs CORS preflight requests based on the passed tests descriptions.
         """
 
@@ -481,7 +513,11 @@ class TestMain(AioAiohttpAppTestBase):
                     resource = cors.add(app.router.add_resource("/resource"))
                     cors.add(resource.add_route("GET", handler),
                              test_descr["route_config"])
-
+                elif use_webview:
+                    WebViewHandler.cors_config = test_descr["route_config"]
+                    cors.add(
+                        app.router.add_route("*", "/resource", WebViewHandler),
+                        webview=True)
                 else:
                     cors.add(
                         app.router.add_route("GET", "/resource", handler),
@@ -607,9 +643,11 @@ class TestMain(AioAiohttpAppTestBase):
         ]
 
         yield from self._run_preflight_requests_tests(
-            tests_descriptions, False)
+            tests_descriptions, False, False)
         yield from self._run_preflight_requests_tests(
-            tests_descriptions, True)
+            tests_descriptions, True, False)
+        yield from self._run_preflight_requests_tests(
+            tests_descriptions, False, True)
 
     @asynctest
     @asyncio.coroutine

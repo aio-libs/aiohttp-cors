@@ -193,6 +193,9 @@ class IntegrationServers:
                 server_descr.cors.add(resource)
                 server_descr.cors.add(route)
 
+            elif self.use_webview:
+                server_descr.cors.add(route, webview=True)
+
             else:
                 server_descr.cors.add(route)
 
@@ -359,7 +362,7 @@ def _run_integration_server():
 
     loop = asyncio.get_event_loop()
 
-    servers = IntegrationServers(False, False)
+    servers = IntegrationServers(False, True)
     logger.info("Starting integration servers...")
     loop.run_until_complete(servers.start_servers())
 

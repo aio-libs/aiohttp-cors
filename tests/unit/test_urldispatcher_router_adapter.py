@@ -22,12 +22,18 @@ from unittest import mock
 from aiohttp import web
 
 from aiohttp_cors.urldispatcher_router_adapter import \
-    ResourcesUrlDispatcherRouterAdapter
-from aiohttp_cors import ResourceOptions
+    ResourcesUrlDispatcherRouterAdapter, OldRoutesUrlDispatcherRouterAdapter
+from aiohttp_cors import ResourceOptions, CorsViewMixin
 
 
 def _handler(request):
     return web.Response(text="Done")
+
+
+class SimpleView(web.View, CorsViewMixin):
+    @asyncio.coroutine
+    def get(self):
+        return web.Response(text="Done")
 
 
 class TestResourcesUrlDispatcherRouterAdapter(unittest.TestCase):
@@ -59,6 +65,11 @@ class TestResourcesUrlDispatcherRouterAdapter(unittest.TestCase):
         self.assertEqual(
             len(self.adapter._resources_with_preflight_handlers), 1)
         self.assertEqual(len(self.adapter._preflight_routes), 1)
+
+    def test_raises_add_preflight_webview(self):
+        with self.assertRaises(ValueError):
+            self.adapter.add_preflight_handler(
+                self.get_route.resource, _handler, webview=True)
 
     def test_add_options_route(self):
         """Test configuring OPTIONS route"""

@@ -716,6 +716,201 @@ class TestMain(AioAiohttpAppTestBase):
 
     @asynctest
     @asyncio.coroutine
+    def test_preflight_request_max_age_resource(self):
+        """Test CORS preflight handling on resource that is available through
+        several routes.
+        """
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+                max_age=1200
+            )
+        })
+
+        resource = cors.add(app.router.add_resource("/{name}"))
+        cors.add(resource.add_route("GET", handler))
+
+        yield from self.create_server(app)
+
+        response = yield from self.session.request(
+            "OPTIONS", self.server_url + "user",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper(),
+                         "1200")
+
+        data = yield from response.text()
+        self.assertEqual(data, "")
+
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_max_age_webview(self):
+        """Test CORS preflight handling on resource that is available through
+        several routes.
+        """
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+                max_age=1200
+            )
+        })
+
+        class TestView(web.View, CorsViewMixin):
+            async def get(self):
+                response = web.Response(text=TEST_BODY)
+
+                response.headers[SERVER_CUSTOM_HEADER_NAME] = \
+                    SERVER_CUSTOM_HEADER_VALUE
+
+                return response
+
+        cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
+
+        yield from self.create_server(app)
+
+        response = yield from self.session.request(
+            "OPTIONS", self.server_url + "user",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper(),
+                         "1200")
+
+        data = yield from response.text()
+        self.assertEqual(data, "")
+
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_multiple_routes_with_one_options_webview(self):
+        """Test CORS preflight handling on resource that is available through
+        several routes.
+        """
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+        })
+
+        class TestView(web.View, CorsViewMixin):
+            async def get(self):
+                response = web.Response(text=TEST_BODY)
+
+                response.headers[SERVER_CUSTOM_HEADER_NAME] = \
+                    SERVER_CUSTOM_HEADER_VALUE
+
+                return response
+
+            put = get
+
+        cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
+
+        yield from self.create_server(app)
+
+        response = yield from self.session.request(
+            "OPTIONS", self.server_url + "user",
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+            }
+        )
+        self.assertEqual(response.status, 200)
+
+        data = yield from response.text()
+        self.assertEqual(data, "")
+
+    @asynctest
+    @asyncio.coroutine
+    def test_preflight_request_headers_webview(self):
+        """Test CORS preflight request handlers handling."""
+        app = web.Application()
+        cors = setup(app, defaults={
+            "*": ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers=("Content-Type", "X-Header"),
+            )
+        })
+
+        class TestView(web.View, CorsViewMixin):
+            async def put(self):
+                response = web.Response(text=TEST_BODY)
+
+                response.headers[SERVER_CUSTOM_HEADER_NAME] = \
+                    SERVER_CUSTOM_HEADER_VALUE
+
+                return response
+
+        cors.add(app.router.add_route("*", "/", TestView), webview=True)
+
+        yield from self.create_server(app)
+
+        response = yield from self.session.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+            }
+        )
+        self.assertEqual((yield from response.text()), "")
+        self.assertEqual(response.status, 200)
+        # Access-Control-Allow-Headers must be compared in case-insensitive
+        # way.
+        self.assertEqual(
+            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
+            "content-type".upper())
+
+        response = yield from self.session.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
+            }
+        )
+        self.assertEqual(response.status, 200)
+        # Access-Control-Allow-Headers must be compared in case-insensitive
+        # way.
+        self.assertEqual(
+            frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
+                      .upper().split(",")),
+            {"X-Header".upper(), "content-type".upper()})
+        self.assertEqual((yield from response.text()), "")
+
+        response = yield from self.session.request(
+            "OPTIONS", self.server_url,
+            headers={
+                hdrs.ORIGIN: "http://example.org",
+                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
+            }
+        )
+        self.assertEqual(response.status, 403)
+        self.assertNotIn(
+            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+            response.headers)
+        self.assertIn(
+            "headers are not allowed: TEST",
+            (yield from response.text()))
+
+    @asynctest
+    @asyncio.coroutine
     def test_preflight_request_headers_resource(self):
         """Test CORS preflight request handlers handling."""
         app = web.Application()

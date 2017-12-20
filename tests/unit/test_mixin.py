@@ -3,6 +3,7 @@ import unittest
 
 from unittest import mock
 from aiohttp import web
+from tests.aio_test_base import asynctest
 
 from aiohttp_cors import CorsConfig, APP_CONFIG_KEY
 from aiohttp_cors import ResourceOptions, CorsViewMixin, custom_cors
@@ -61,6 +62,28 @@ class TestCustomCors(unittest.TestCase):
 
     def tearDown(self):
         self.loop.close()
+
+    def test_raise_exception_when_cors_not_configure(self):
+        request = mock.Mock()
+        request.app = {}
+        view = CustomMethodView(request)
+
+        with self.assertRaises(ValueError):
+            view.get_request_config(request, 'post')
+
+    @asynctest
+    async def test_raises_forbidden_when_config_not_found(self):
+        self.app[APP_CONFIG_KEY].defaults = {}
+        request = mock.Mock()
+        request.app = self.app
+        request.headers = {
+            'Origin': '*',
+            'Access-Control-Request-Method': 'GET'
+        }
+        view = SimpleView(request)
+
+        with self.assertRaises(web.HTTPForbidden):
+            await view.options()
 
     def test_method_with_custom_cors(self):
         """Test adding resource with web.View as handler"""

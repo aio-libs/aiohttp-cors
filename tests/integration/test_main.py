@@ -766,7 +766,8 @@ class TestMain(AioAiohttpAppTestBase):
         })
 
         class TestView(web.View, CorsViewMixin):
-            async def get(self):
+            @asyncio.coroutine
+            def get(self):
                 response = web.Response(text=TEST_BODY)
 
                 response.headers[SERVER_CUSTOM_HEADER_NAME] = \
@@ -808,7 +809,8 @@ class TestMain(AioAiohttpAppTestBase):
         })
 
         class TestView(web.View, CorsViewMixin):
-            async def get(self):
+            @asyncio.coroutine
+            def get(self):
                 response = web.Response(text=TEST_BODY)
 
                 response.headers[SERVER_CUSTOM_HEADER_NAME] = \
@@ -848,7 +850,8 @@ class TestMain(AioAiohttpAppTestBase):
         })
 
         class TestView(web.View, CorsViewMixin):
-            async def put(self):
+            @asyncio.coroutine
+            def put(self):
                 response = web.Response(text=TEST_BODY)
 
                 response.headers[SERVER_CUSTOM_HEADER_NAME] = \

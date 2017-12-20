@@ -22,18 +22,12 @@ from unittest import mock
 from aiohttp import web
 
 from aiohttp_cors.urldispatcher_router_adapter import \
-    ResourcesUrlDispatcherRouterAdapter, OldRoutesUrlDispatcherRouterAdapter
-from aiohttp_cors import ResourceOptions, CorsViewMixin
+    ResourcesUrlDispatcherRouterAdapter
+from aiohttp_cors import ResourceOptions
 
 
 def _handler(request):
     return web.Response(text="Done")
-
-
-class SimpleView(web.View, CorsViewMixin):
-    @asyncio.coroutine
-    def get(self):
-        return web.Response(text="Done")
 
 
 class TestResourcesUrlDispatcherRouterAdapter(unittest.TestCase):

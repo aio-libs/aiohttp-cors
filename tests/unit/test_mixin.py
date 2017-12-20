@@ -72,7 +72,8 @@ class TestCustomCors(unittest.TestCase):
             view.get_request_config(request, 'post')
 
     @asynctest
-    async def test_raises_forbidden_when_config_not_found(self):
+    @asyncio.coroutine
+    def test_raises_forbidden_when_config_not_found(self):
         self.app[APP_CONFIG_KEY].defaults = {}
         request = mock.Mock()
         request.app = self.app
@@ -83,7 +84,7 @@ class TestCustomCors(unittest.TestCase):
         view = SimpleView(request)
 
         with self.assertRaises(web.HTTPForbidden):
-            await view.options()
+            yield from view.options()
 
     def test_method_with_custom_cors(self):
         """Test adding resource with web.View as handler"""

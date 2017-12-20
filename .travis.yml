@@ -14,6 +14,7 @@ before_install:
 install:
 - pip install --upgrade pip setuptools wheel
 - pip install -Ur requirements-dev.txt
+- pip install codecov
 
 before_script:
   # Start X-server for Selenium tests.
@@ -24,6 +25,9 @@ before_script:
 script:
 - '[ "$TYPE" != "test" ] || python setup.py test --addopts -v --addopts -s'
 - '[ "$TYPE" != "lint" ] || python setup.py check'
+
+after_success:
+  codecov
 
 env:
   global:

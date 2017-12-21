@@ -25,11 +25,12 @@ from .__about__ import (
 )
 from .resource_options import ResourceOptions
 from .cors_config import CorsConfig
+from .mixin import CorsViewMixin, custom_cors
 
 __all__ = (
     "__title__", "__version__", "__author__", "__email__", "__summary__",
     "__uri__", "__license__", "__copyright__",
-    "setup", "CorsConfig", "ResourceOptions",
+    "setup", "CorsConfig", "ResourceOptions", "CorsViewMixin", "custom_cors"
 )
 
 

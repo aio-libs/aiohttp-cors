@@ -51,7 +51,10 @@ class AbstractRouterAdapter(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def add_preflight_handler(self, routing_entity, handler):
+    def add_preflight_handler(self,
+                              routing_entity,
+                              handler,
+                              webview: bool=False):
         """Add OPTIONS handler for all routes defined by `routing_entity`.
 
         Does nothing if CORS handler already handles routing entity.

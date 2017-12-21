@@ -346,6 +346,46 @@ in the router:
     for route in list(app.router.routes()):
         cors.add(route)
 
+You can also use ``CorsViewMixin`` on ``web.View``:
+
+.. code-block:: python
+
+    class CorsView(web.View, CorsViewMixin):
+
+        cors_config = {
+            "*": ResourceOption(
+                allow_credentials=True,
+                allow_headers="X-Request-ID",
+            )
+        }
+
+        @asyncio.coroutine
+        def get(self):
+            return web.Response(text="Done")
+
+        @custom_cors({
+            "*": ResourceOption(
+                allow_credentials=True,
+                allow_headers="*",
+            )
+        })
+        @asyncio.coroutine
+        def post(self):
+            return web.Response(text="Done")
+
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+    })
+
+    cors.add(
+        app.router.add_route("*", "/resource", CorsView),
+        webview=True)
+
+
 Security
 ========
 
@@ -460,7 +500,7 @@ Post release steps:
 Bugs
 ====
 
-Please report bugs, issues, feature requests, etc. on 
+Please report bugs, issues, feature requests, etc. on
 `GitHub <https://github.com/aio-libs/aiohttp_cors/issues>`__.
 
 

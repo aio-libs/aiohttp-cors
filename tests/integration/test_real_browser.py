@@ -33,7 +33,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from aiohttp_cors import setup, ResourceOptions
+from aiohttp_cors import setup, ResourceOptions, CorsViewMixin
 
 from ..aio_test_base import create_server, AioTestBase, asynctest
 
@@ -52,7 +52,7 @@ class _ServerDescr:
 class IntegrationServers:
     """Integration servers starting/stopping manager"""
 
-    def __init__(self, use_resources, *, loop=None):
+    def __init__(self, use_resources, use_webview, *, loop=None):
         self.servers = {}
 
         self.loop = loop
@@ -60,6 +60,7 @@ class IntegrationServers:
             self.loop = asyncio.get_event_loop()
 
         self.use_resources = use_resources
+        self.use_webview = use_webview
 
         self._logger = logging.getLogger("IntegrationServers")
 
@@ -97,6 +98,12 @@ class IntegrationServers:
                 {name: descr.url for name, descr in self.servers.items()}
             return web.Response(
                 text=json.dumps(servers_addresses))
+
+        class ResourceView(web.View, CorsViewMixin):
+
+            @asyncio.coroutine
+            def get(self) -> web.StreamResponse:
+                return handle_resource(self.request)
 
         # For most resources:
         # "origin" server has no CORS configuration.
@@ -137,8 +144,12 @@ class IntegrationServers:
         for server_name in server_names:
             app = self.servers[server_name].app
             app.router.add_route("GET", "/no_cors.json", handle_no_cors)
-            app.router.add_route("GET", "/cors_resource", handle_resource,
-                                 name="cors_resource")
+            if self.use_webview:
+                app.router.add_route("*", "/cors_resource", ResourceView,
+                                     name="cors_resource")
+            else:
+                app.router.add_route("GET", "/cors_resource", handle_resource,
+                                     name="cors_resource")
 
         cors_default_configs = {
             "allowing": {
@@ -182,6 +193,9 @@ class IntegrationServers:
                 server_descr.cors.add(resource)
                 server_descr.cors.add(route)
 
+            elif self.use_webview:
+                server_descr.cors.add(route, webview=True)
+
             else:
                 server_descr.cors.add(route)
 
@@ -220,9 +234,9 @@ def _get_chrome_driver():
 
 class TestInBrowser(AioTestBase):
     @asyncio.coroutine
-    def _test_in_webdriver(self, driver, use_resources):
+    def _test_in_webdriver(self, driver, use_resources, use_webview):
         # TODO: Use pytest's fixtures to test use resources/not use resources.
-        servers = IntegrationServers(use_resources)
+        servers = IntegrationServers(use_resources, use_webview)
         yield from servers.start_servers()
 
         def selenium_thread():
@@ -269,7 +283,7 @@ class TestInBrowser(AioTestBase):
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, False)
+            yield from self._test_in_webdriver(driver, False, False)
         finally:
             driver.close()
 
@@ -282,7 +296,7 @@ class TestInBrowser(AioTestBase):
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, False)
+            yield from self._test_in_webdriver(driver, False, False)
         finally:
             driver.close()
 
@@ -295,7 +309,7 @@ class TestInBrowser(AioTestBase):
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, True)
+            yield from self._test_in_webdriver(driver, True, False)
         finally:
             driver.close()
 
@@ -308,7 +322,33 @@ class TestInBrowser(AioTestBase):
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, True)
+            yield from self._test_in_webdriver(driver, True, False)
+        finally:
+            driver.close()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_firefox_webview(self):
+        try:
+            driver = webdriver.Firefox()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver, False, True)
+        finally:
+            driver.close()
+
+    @asynctest
+    @asyncio.coroutine
+    def test_chromium_webview(self):
+        try:
+            driver = _get_chrome_driver()
+        except selenium.common.exceptions.WebDriverException:
+            raise unittest.SkipTest
+
+        try:
+            yield from self._test_in_webdriver(driver, False, True)
         finally:
             driver.close()
 
@@ -322,7 +362,7 @@ def _run_integration_server():
 
     loop = asyncio.get_event_loop()
 
-    servers = IntegrationServers()
+    servers = IntegrationServers(False, True)
     logger.info("Starting integration servers...")
     loop.run_until_complete(servers.start_servers())
 

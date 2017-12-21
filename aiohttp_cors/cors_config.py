@@ -25,11 +25,11 @@ from .urldispatcher_router_adapter import OldRoutesUrlDispatcherRouterAdapter
 from .urldispatcher_router_adapter import ResourcesUrlDispatcherRouterAdapter
 from .abc import AbstractRouterAdapter
 from .resource_options import ResourceOptions
+from .preflight_handler import _PreflightHandler
 
 __all__ = (
     "CorsConfig",
 )
-
 
 # Positive response to Access-Control-Allow-Credentials
 _TRUE = "true"
@@ -103,7 +103,7 @@ def _parse_config_options(
 _ConfigType = Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]
 
 
-class _CorsConfigImpl:
+class _CorsConfigImpl(_PreflightHandler):
 
     def __init__(self,
                  app: web.Application,
@@ -118,7 +118,8 @@ class _CorsConfigImpl:
 
     def add(self,
             routing_entity,
-            config: _ConfigType=None):
+            config: _ConfigType=None,
+            webview: bool=False):
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.
@@ -133,9 +134,9 @@ class _CorsConfigImpl:
         parsed_config = _parse_config_options(config)
 
         self._router_adapter.add_preflight_handler(
-            routing_entity, self._preflight_handler)
+            routing_entity, self._preflight_handler, webview=webview)
         self._router_adapter.set_config_for_routing_entity(
-            routing_entity, parsed_config)
+            routing_entity, parsed_config, webview=webview)
 
         return routing_entity
 
@@ -196,127 +197,12 @@ class _CorsConfigImpl:
             # Set allowed credentials.
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS] = _TRUE
 
-    @staticmethod
-    def _parse_request_method(request: web.Request):
-        """Parse Access-Control-Request-Method header of the preflight request
-        """
-        method = request.headers.get(hdrs.ACCESS_CONTROL_REQUEST_METHOD)
-        if method is None:
-            raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "'Access-Control-Request-Method' header is not specified")
-
-        # FIXME: validate method string (ABNF: method = token), if parsing
-        # fails, raise HTTPForbidden.
-
-        return method
-
-    @staticmethod
-    def _parse_request_headers(request: web.Request):
-        """Parse Access-Control-Request-Headers header or the preflight request
-
-        Returns set of headers in upper case.
-        """
-        headers = request.headers.get(hdrs.ACCESS_CONTROL_REQUEST_HEADERS)
-        if headers is None:
-            return frozenset()
-
-        # FIXME: validate each header string, if parsing fails, raise
-        # HTTPForbidden.
-        # FIXME: check, that headers split and stripped correctly (according
-        # to ABNF).
-        headers = (h.strip(" \t").upper() for h in headers.split(","))
-        # pylint: disable=bad-builtin
-        return frozenset(filter(None, headers))
-
     @asyncio.coroutine
-    def _preflight_handler(self, request: web.Request):
-        """CORS preflight request handler"""
-
-        # Handle according to part 6.2 of the CORS specification.
-
-        origin = request.headers.get(hdrs.ORIGIN)
-        if origin is None:
-            # Terminate CORS according to CORS 6.2.1.
-            raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "origin header is not specified in the request")
-
-        # CORS 6.2.3. Doing it out of order is not an error.
-        request_method = self._parse_request_method(request)
-
-        # CORS 6.2.5. Doing it out of order is not an error.
-
-        try:
-            config = \
-                yield from self._router_adapter.get_preflight_request_config(
-                    request, origin, request_method)
-        except KeyError:
-            raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "request method {!r} is not allowed "
-                     "for {!r} origin".format(request_method, origin))
-
-        if not config:
-            # No allowed origins for the route.
-            # Terminate CORS according to CORS 6.2.1.
-            raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "no origins are allowed")
-
-        options = config.get(origin, config.get("*"))
-        if options is None:
-            # No configuration for the origin - deny.
-            # Terminate CORS according to CORS 6.2.2.
-            raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "origin '{}' is not allowed".format(origin))
-
-        # CORS 6.2.4
-        request_headers = self._parse_request_headers(request)
-
-        # CORS 6.2.6
-        if options.allow_headers == "*":
-            pass
-        else:
-            disallowed_headers = request_headers - options.allow_headers
-            if disallowed_headers:
-                raise web.HTTPForbidden(
-                    text="CORS preflight request failed: "
-                         "headers are not allowed: {}".format(
-                             ", ".join(disallowed_headers)))
-
-        # Ok, CORS actual request with specified in the preflight request
-        # parameters is allowed.
-        # Set appropriate headers and return 200 response.
-
-        response = web.Response()
-
-        # CORS 6.2.7
-        response.headers[hdrs.ACCESS_CONTROL_ALLOW_ORIGIN] = origin
-        if options.allow_credentials:
-            # Set allowed credentials.
-            response.headers[hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS] = _TRUE
-
-        # CORS 6.2.8
-        if options.max_age is not None:
-            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = \
-                str(options.max_age)
-
-        # CORS 6.2.9
-        # TODO: more optimal for client preflight request cache would be to
-        # respond with ALL allowed methods.
-        response.headers[hdrs.ACCESS_CONTROL_ALLOW_METHODS] = request_method
-
-        # CORS 6.2.10
-        if request_headers:
-            # Note: case of the headers in the request is changed, but this
-            # shouldn't be a problem, since the headers should be compared in
-            # the case-insensitive way.
-            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS] = \
-                ",".join(request_headers)
-
-        return response
+    def _get_config(self, request, origin, request_method):
+        config = \
+            yield from self._router_adapter.get_preflight_request_config(
+                request, origin, request_method)
+        return config
 
 
 class CorsConfig:
@@ -341,7 +227,7 @@ class CorsConfig:
             Router adapter. Required if application uses non-default router.
         """
 
-        defaults = _parse_config_options(defaults)
+        self.defaults = _parse_config_options(defaults)
 
         self._cors_impl = None
 
@@ -355,13 +241,13 @@ class CorsConfig:
 
         elif isinstance(app.router, web.UrlDispatcher):
             self._resources_router_adapter = \
-                ResourcesUrlDispatcherRouterAdapter(app.router, defaults)
+                ResourcesUrlDispatcherRouterAdapter(app.router, self.defaults)
             self._resources_cors_impl = _CorsConfigImpl(
                 app,
                 self._resources_router_adapter)
             self._old_routes_cors_impl = _CorsConfigImpl(
                 app,
-                OldRoutesUrlDispatcherRouterAdapter(app.router, defaults))
+                OldRoutesUrlDispatcherRouterAdapter(app.router, self.defaults))
         else:
             raise RuntimeError(
                 "Router adapter is not specified. "
@@ -370,7 +256,8 @@ class CorsConfig:
 
     def add(self,
             routing_entity,
-            config: _ConfigType = None):
+            config: _ConfigType = None,
+            webview: bool=False):
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.
@@ -404,7 +291,7 @@ class CorsConfig:
                     # Route which resource has no CORS configuration, i.e.
                     # old-style route.
                     return self._old_routes_cors_impl.add(
-                        routing_entity, config)
+                        routing_entity, config, webview=webview)
 
             else:
                 raise ValueError(

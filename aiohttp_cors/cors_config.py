@@ -15,7 +15,6 @@
 """CORS configuration container class definition.
 """
 
-import asyncio
 import collections
 from typing import Mapping, Union, Any
 
@@ -140,10 +139,9 @@ class _CorsConfigImpl(_PreflightHandler):
 
         return routing_entity
 
-    @asyncio.coroutine
-    def _on_response_prepare(self,
-                             request: web.Request,
-                             response: web.StreamResponse):
+    async def _on_response_prepare(self,
+                                   request: web.Request,
+                                   response: web.StreamResponse):
         """Non-preflight CORS request response processor.
 
         If request is done on CORS-enabled route, process request parameters
@@ -197,11 +195,10 @@ class _CorsConfigImpl(_PreflightHandler):
             # Set allowed credentials.
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS] = _TRUE
 
-    @asyncio.coroutine
-    def _get_config(self, request, origin, request_method):
-        config = \
-            yield from self._router_adapter.get_preflight_request_config(
-                request, origin, request_method)
+    async def _get_config(self, request, origin, request_method):
+        adapter = self._router_adapter
+        config = await adapter.get_preflight_request_config(
+            request, origin, request_method)
         return config
 
 

@@ -68,31 +68,26 @@ class IntegrationServers:
     def origin_server_url(self):
         return self.servers["origin"].url
 
-    @asyncio.coroutine
-    def start_servers(self):
+    async def start_servers(self):
         test_page_path = pathlib.Path(__file__).with_name("test_page.html")
 
-        @asyncio.coroutine
-        def handle_test_page(request: web.Request) -> web.StreamResponse:
+        async def handle_test_page(request: web.Request) -> web.StreamResponse:
             with test_page_path.open("r", encoding="utf-8") as f:
                 return web.Response(
                     text=f.read(),
                     headers={hdrs.CONTENT_TYPE: "text/html"})
 
-        @asyncio.coroutine
-        def handle_no_cors(request: web.Request) -> web.StreamResponse:
+        async def handle_no_cors(request: web.Request) -> web.StreamResponse:
             return web.Response(
                 text="""{"type": "no_cors.json"}""",
                 headers={hdrs.CONTENT_TYPE: "application/json"})
 
-        @asyncio.coroutine
-        def handle_resource(request: web.Request) -> web.StreamResponse:
+        async def handle_resource(request: web.Request) -> web.StreamResponse:
             return web.Response(
                 text="""{"type": "resource"}""",
                 headers={hdrs.CONTENT_TYPE: "application/json"})
 
-        @asyncio.coroutine
-        def handle_servers_addresses(
+        async def handle_servers_addresses(
                 request: web.Request) -> web.StreamResponse:
             servers_addresses = \
                 {name: descr.url for name, descr in self.servers.items()}
@@ -101,8 +96,7 @@ class IntegrationServers:
 
         class ResourceView(web.View, CorsViewMixin):
 
-            @asyncio.coroutine
-            def get(self) -> web.StreamResponse:
+            async def get(self) -> web.StreamResponse:
                 return handle_resource(self.request)
 
         # For most resources:
@@ -202,21 +196,20 @@ class IntegrationServers:
         # Start servers.
         for server_name, server_descr in self.servers.items():
             handler = server_descr.app.make_handler()
-            server = yield from create_server(handler, self.loop,
-                                              sock=server_sockets[server_name])
+            server = await create_server(handler, self.loop,
+                                         sock=server_sockets[server_name])
             server_descr.handler = handler
             server_descr.server = server
 
             self._logger.info("Started server '%s' at '%s'",
                               server_name, server_descr.url)
 
-    @asyncio.coroutine
-    def stop_servers(self):
+    async def stop_servers(self):
         for server_descr in self.servers.values():
             server_descr.server.close()
-            yield from server_descr.handler.shutdown()
-            yield from server_descr.server.wait_closed()
-            yield from server_descr.app.cleanup()
+            await server_descr.handler.shutdown()
+            await server_descr.server.wait_closed()
+            await server_descr.app.cleanup()
 
         self.servers = {}
 
@@ -233,11 +226,11 @@ def _get_chrome_driver():
 
 
 class TestInBrowser(AioTestBase):
-    @asyncio.coroutine
-    def _test_in_webdriver(self, driver, use_resources, use_webview):
+
+    async def _test_in_webdriver(self, driver, use_resources, use_webview):
         # TODO: Use pytest's fixtures to test use resources/not use resources.
         servers = IntegrationServers(use_resources, use_webview)
-        yield from servers.start_servers()
+        await servers.start_servers()
 
         def selenium_thread():
             driver.get(servers.origin_server_url)
@@ -262,7 +255,7 @@ class TestInBrowser(AioTestBase):
             return json.loads(results_area.get_attribute("value"))
 
         try:
-            results = yield from self.loop.run_in_executor(
+            results = await self.loop.run_in_executor(
                 self.thread_pool_executor, selenium_thread)
 
             self.assertEqual(results["status"], "success")
@@ -272,83 +265,77 @@ class TestInBrowser(AioTestBase):
                                      msg=(test_name, test_data))
 
         finally:
-            yield from servers.stop_servers()
+            await servers.stop_servers()
 
     @asynctest
-    @asyncio.coroutine
-    def test_firefox(self):
+    async def test_firefox(self):
         try:
             driver = webdriver.Firefox()
         except selenium.common.exceptions.WebDriverException:
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, False, False)
+            await self._test_in_webdriver(driver, False, False)
         finally:
             driver.close()
 
     @asynctest
-    @asyncio.coroutine
-    def test_chromium(self):
+    async def test_chromium(self):
         try:
             driver = _get_chrome_driver()
         except selenium.common.exceptions.WebDriverException:
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, False, False)
+            await self._test_in_webdriver(driver, False, False)
         finally:
             driver.close()
 
     @asynctest
-    @asyncio.coroutine
-    def test_firefox_resource(self):
+    async def test_firefox_resource(self):
         try:
             driver = webdriver.Firefox()
         except selenium.common.exceptions.WebDriverException:
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, True, False)
+            await self._test_in_webdriver(driver, True, False)
         finally:
             driver.close()
 
     @asynctest
-    @asyncio.coroutine
-    def test_chromium_resource(self):
+    async def test_chromium_resource(self):
         try:
             driver = _get_chrome_driver()
         except selenium.common.exceptions.WebDriverException:
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, True, False)
+            await self._test_in_webdriver(driver, True, False)
         finally:
             driver.close()
 
     @asynctest
-    @asyncio.coroutine
-    def test_firefox_webview(self):
+    async def test_firefox_webview(self):
         try:
             driver = webdriver.Firefox()
         except selenium.common.exceptions.WebDriverException:
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, False, True)
+            await self._test_in_webdriver(driver, False, True)
         finally:
             driver.close()
 
     @asynctest
-    @asyncio.coroutine
-    def test_chromium_webview(self):
+    async def test_chromium_webview(self):
         try:
             driver = _get_chrome_driver()
         except selenium.common.exceptions.WebDriverException:
             raise unittest.SkipTest
 
         try:
-            yield from self._test_in_webdriver(driver, False, True)
+            await self._test_in_webdriver(driver, False, True)
         finally:
             driver.close()
 

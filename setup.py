@@ -65,16 +65,15 @@ setup(
     ],
     test_suite="tests",
     install_requires=[
-        "aiohttp>=1.1",
-        "typing;python_version<'3.5'",
+        "aiohttp>=2.0",
     ],
+    python_requires='>=3.5.0',
     license=about["__license__"],
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Intended Audience :: Developers",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries",
@@ -83,6 +82,6 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
     ],
 )

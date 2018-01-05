@@ -34,9 +34,8 @@ SERVER_CUSTOM_HEADER_NAME = "X-Server-Custom-Header"
 SERVER_CUSTOM_HEADER_VALUE = "some value"
 
 
-@asyncio.coroutine
 # pylint: disable=unused-argument
-def handler(request: web.Request) -> web.StreamResponse:
+async def handler(request: web.Request) -> web.StreamResponse:
     """Dummy request handler, returning `TEST_BODY`."""
     response = web.Response(text=TEST_BODY)
 
@@ -47,8 +46,7 @@ def handler(request: web.Request) -> web.StreamResponse:
 
 class WebViewHandler(web.View, CorsViewMixin):
 
-    @asyncio.coroutine
-    def get(self) -> web.StreamResponse:
+    async def get(self) -> web.StreamResponse:
         """Dummy request handler, returning `TEST_BODY`."""
         response = web.Response(text=TEST_BODY)
 
@@ -84,8 +82,7 @@ class AioAiohttpAppTestBase(AioTestBase):
 
         super().tearDown()
 
-    @asyncio.coroutine
-    def create_server(self, app: web.Application):
+    async def create_server(self, app: web.Application):
         """Create server listening on random port."""
 
         assert self.app is None
@@ -94,7 +91,7 @@ class AioAiohttpAppTestBase(AioTestBase):
         assert self.handler is None
         self.handler = app.make_handler()
 
-        self.server = (yield from create_server(self.handler, self.loop))
+        self.server = await create_server(self.handler, self.loop)
 
         return self.server
 
@@ -105,15 +102,14 @@ class AioAiohttpAppTestBase(AioTestBase):
         hostaddr, port = self.server.sockets[0].getsockname()
         return "http://{host}:{port}/".format(host=hostaddr, port=port)
 
-    @asyncio.coroutine
-    def shutdown_server(self):
+    async def shutdown_server(self):
         """Shutdown server."""
         assert self.server is not None
 
         self.server.close()
-        yield from self.handler.shutdown()
-        yield from self.server.wait_closed()
-        yield from self.app.cleanup()
+        await self.handler.shutdown()
+        await self.server.wait_closed()
+        await self.app.cleanup()
 
         self.server = None
         self.app = None
@@ -124,83 +120,77 @@ class TestMain(AioAiohttpAppTestBase):
     """Tests CORS server by issuing CORS requests."""
 
     @asynctest
-    @asyncio.coroutine
-    def test_message_roundtrip(self):
+    async def test_message_roundtrip(self):
         """Test that aiohttp server is correctly setup in the base class."""
 
         app = web.Application()
 
         app.router.add_route("GET", "/", handler)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request("GET", self.server_url)
+        response = await self.session.request("GET", self.server_url)
         self.assertEqual(response.status, 200)
-        data = yield from response.text()
+        data = await response.text()
 
         self.assertEqual(data, TEST_BODY)
 
     @asynctest
-    @asyncio.coroutine
-    def test_dummy_setup(self):
+    async def test_dummy_setup(self):
         """Test a dummy configuration."""
         app = web.Application()
         setup(app)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
     @asynctest
-    @asyncio.coroutine
-    def test_dummy_setup_roundtrip(self):
+    async def test_dummy_setup_roundtrip(self):
         """Test a dummy configuration with a message round-trip."""
         app = web.Application()
         setup(app)
 
         app.router.add_route("GET", "/", handler)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request("GET", self.server_url)
+        response = await self.session.request("GET", self.server_url)
         self.assertEqual(response.status, 200)
-        data = yield from response.text()
+        data = await response.text()
 
         self.assertEqual(data, TEST_BODY)
 
     @asynctest
-    @asyncio.coroutine
-    def test_dummy_setup_roundtrip_resource(self):
+    async def test_dummy_setup_roundtrip_resource(self):
         """Test a dummy configuration with a message round-trip."""
         app = web.Application()
         setup(app)
 
         app.router.add_resource("/").add_route("GET", handler)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request("GET", self.server_url)
+        response = await self.session.request("GET", self.server_url)
         self.assertEqual(response.status, 200)
-        data = yield from response.text()
+        data = await response.text()
 
         self.assertEqual(data, TEST_BODY)
 
-    @asyncio.coroutine
-    def _run_simple_requests_tests(self,
-                                   tests_descriptions,
-                                   use_resources,
-                                   use_webview):
+    async def _run_simple_requests_tests(self,
+                                         tests_descriptions,
+                                         use_resources,
+                                         use_webview):
         """Runs CORS simple requests (without a preflight request) based
         on the passed tests descriptions.
         """
 
-        @asyncio.coroutine
-        def run_test(test):
+        async def run_test(test):
             """Run single test"""
 
-            response = yield from self.session.get(
+            response = await self.session.get(
                 self.server_url + "resource",
                 headers=test.get("request_headers", {}))
             self.assertEqual(response.status, 200)
-            self.assertEqual((yield from response.text()), TEST_BODY)
+            self.assertEqual(await response.text(), TEST_BODY)
 
             for header_name, header_value in test.get(
                     "in_response_headers", {}).items():
@@ -231,18 +221,17 @@ class TestMain(AioAiohttpAppTestBase):
                         app.router.add_route("GET", "/resource", handler),
                         test_descr["route_config"])
 
-                yield from self.create_server(app)
+                await self.create_server(app)
 
                 try:
                     for test_data in test_descr["tests"]:
                         with self.subTest(name=test_data["name"]):
-                            yield from run_test(test_data)
+                            await run_test(test_data)
                 finally:
-                    yield from self.shutdown_server()
+                    await self.shutdown_server()
 
     @asynctest
-    @asyncio.coroutine
-    def test_simple_default(self):
+    async def test_simple_default(self):
         """Test CORS simple requests with a route with the default
         configuration.
 
@@ -327,16 +316,15 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, False, False)
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, True, False)
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, False, True)
 
     @asynctest
-    @asyncio.coroutine
-    def test_simple_with_credentials(self):
+    async def test_simple_with_credentials(self):
         """Test CORS simple requests with a route with enabled authorization.
 
         Route with enabled authorization must return
@@ -403,16 +391,15 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, False, False)
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, True, False)
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, False, True)
 
     @asynctest
-    @asyncio.coroutine
-    def test_simple_expose_headers(self):
+    async def test_simple_expose_headers(self):
         """Test CORS simple requests with a route that exposes header."""
 
         client1 = "http://client1.example.org"
@@ -465,30 +452,28 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, False, False)
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, True, False)
-        yield from self._run_simple_requests_tests(
+        await self._run_simple_requests_tests(
             tests_descriptions, False, True)
 
-    @asyncio.coroutine
-    def _run_preflight_requests_tests(self,
-                                      tests_descriptions,
-                                      use_resources,
-                                      use_webview):
+    async def _run_preflight_requests_tests(self,
+                                            tests_descriptions,
+                                            use_resources,
+                                            use_webview):
         """Runs CORS preflight requests based on the passed tests descriptions.
         """
 
-        @asyncio.coroutine
-        def run_test(test):
+        async def run_test(test):
             """Run single test"""
 
-            response = yield from self.session.options(
+            response = await self.session.options(
                 self.server_url + "resource",
                 headers=test.get("request_headers", {}))
             self.assertEqual(response.status, test.get("response_status", 200))
-            response_text = yield from response.text()
+            response_text = await response.text()
             in_response = test.get("in_response")
             if in_response is not None:
                 self.assertIn(in_response, response_text)
@@ -523,18 +508,17 @@ class TestMain(AioAiohttpAppTestBase):
                         app.router.add_route("GET", "/resource", handler),
                         test_descr["route_config"])
 
-                yield from self.create_server(app)
+                await self.create_server(app)
 
                 try:
                     for test_data in test_descr["tests"]:
                         with self.subTest(name=test_data["name"]):
-                            yield from run_test(test_data)
+                            await run_test(test_data)
                 finally:
-                    yield from self.shutdown_server()
+                    await self.shutdown_server()
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_default(self):
+    async def test_preflight_default(self):
         """Test CORS preflight requests with a route with the default
         configuration.
 
@@ -642,16 +626,15 @@ class TestMain(AioAiohttpAppTestBase):
             },
         ]
 
-        yield from self._run_preflight_requests_tests(
+        await self._run_preflight_requests_tests(
             tests_descriptions, False, False)
-        yield from self._run_preflight_requests_tests(
+        await self._run_preflight_requests_tests(
             tests_descriptions, True, False)
-        yield from self._run_preflight_requests_tests(
+        await self._run_preflight_requests_tests(
             tests_descriptions, False, True)
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_multiple_routes_with_one_options(self):
+    async def test_preflight_request_multiple_routes_with_one_options(self):
         """Test CORS preflight handling on resource that is available through
         several routes.
         """
@@ -667,9 +650,9 @@ class TestMain(AioAiohttpAppTestBase):
         cors.add(app.router.add_route("GET", "/{name}", handler))
         cors.add(app.router.add_route("PUT", "/{name}", handler))
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -678,12 +661,11 @@ class TestMain(AioAiohttpAppTestBase):
         )
         self.assertEqual(response.status, 200)
 
-        data = yield from response.text()
+        data = await response.text()
         self.assertEqual(data, "")
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_multiple_routes_with_one_options_resource(self):
+    async def test_preflight_req_multiple_routes_with_one_options_res(self):
         """Test CORS preflight handling on resource that is available through
         several routes.
         """
@@ -700,9 +682,9 @@ class TestMain(AioAiohttpAppTestBase):
         cors.add(resource.add_route("GET", handler))
         cors.add(resource.add_route("PUT", handler))
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -711,12 +693,11 @@ class TestMain(AioAiohttpAppTestBase):
         )
         self.assertEqual(response.status, 200)
 
-        data = yield from response.text()
+        data = await response.text()
         self.assertEqual(data, "")
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_max_age_resource(self):
+    async def test_preflight_request_max_age_resource(self):
         """Test CORS preflight handling on resource that is available through
         several routes.
         """
@@ -733,9 +714,9 @@ class TestMain(AioAiohttpAppTestBase):
         resource = cors.add(app.router.add_resource("/{name}"))
         cors.add(resource.add_route("GET", handler))
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -746,12 +727,11 @@ class TestMain(AioAiohttpAppTestBase):
         self.assertEqual(response.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper(),
                          "1200")
 
-        data = yield from response.text()
+        data = await response.text()
         self.assertEqual(data, "")
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_max_age_webview(self):
+    async def test_preflight_request_max_age_webview(self):
         """Test CORS preflight handling on resource that is available through
         several routes.
         """
@@ -777,9 +757,9 @@ class TestMain(AioAiohttpAppTestBase):
 
         cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -790,12 +770,11 @@ class TestMain(AioAiohttpAppTestBase):
         self.assertEqual(response.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper(),
                          "1200")
 
-        data = yield from response.text()
+        data = await response.text()
         self.assertEqual(data, "")
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_multiple_routes_with_one_options_webview(self):
+    async def test_preflight_req_mult_routes_with_one_options_webview(self):
         """Test CORS preflight handling on resource that is available through
         several routes.
         """
@@ -809,8 +788,7 @@ class TestMain(AioAiohttpAppTestBase):
         })
 
         class TestView(web.View, CorsViewMixin):
-            @asyncio.coroutine
-            def get(self):
+            async def get(self):
                 response = web.Response(text=TEST_BODY)
 
                 response.headers[SERVER_CUSTOM_HEADER_NAME] = \
@@ -822,9 +800,9 @@ class TestMain(AioAiohttpAppTestBase):
 
         cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url + "user",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -833,12 +811,11 @@ class TestMain(AioAiohttpAppTestBase):
         )
         self.assertEqual(response.status, 200)
 
-        data = yield from response.text()
+        data = await response.text()
         self.assertEqual(data, "")
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_headers_webview(self):
+    async def test_preflight_request_headers_webview(self):
         """Test CORS preflight request handlers handling."""
         app = web.Application()
         cors = setup(app, defaults={
@@ -850,8 +827,7 @@ class TestMain(AioAiohttpAppTestBase):
         })
 
         class TestView(web.View, CorsViewMixin):
-            @asyncio.coroutine
-            def put(self):
+            async def put(self):
                 response = web.Response(text=TEST_BODY)
 
                 response.headers[SERVER_CUSTOM_HEADER_NAME] = \
@@ -861,9 +837,9 @@ class TestMain(AioAiohttpAppTestBase):
 
         cors.add(app.router.add_route("*", "/", TestView), webview=True)
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -871,7 +847,7 @@ class TestMain(AioAiohttpAppTestBase):
                 hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
             }
         )
-        self.assertEqual((yield from response.text()), "")
+        self.assertEqual((await response.text()), "")
         self.assertEqual(response.status, 200)
         # Access-Control-Allow-Headers must be compared in case-insensitive
         # way.
@@ -879,7 +855,7 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
             "content-type".upper())
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -894,9 +870,9 @@ class TestMain(AioAiohttpAppTestBase):
             frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
                       .upper().split(",")),
             {"X-Header".upper(), "content-type".upper()})
-        self.assertEqual((yield from response.text()), "")
+        self.assertEqual((await response.text()), "")
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -910,11 +886,10 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers)
         self.assertIn(
             "headers are not allowed: TEST",
-            (yield from response.text()))
+            await response.text())
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_headers_resource(self):
+    async def test_preflight_request_headers_resource(self):
         """Test CORS preflight request handlers handling."""
         app = web.Application()
         cors = setup(app, defaults={
@@ -927,9 +902,9 @@ class TestMain(AioAiohttpAppTestBase):
 
         cors.add(app.router.add_route("PUT", "/", handler))
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -937,7 +912,7 @@ class TestMain(AioAiohttpAppTestBase):
                 hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
             }
         )
-        self.assertEqual((yield from response.text()), "")
+        self.assertEqual(await response.text(), "")
         self.assertEqual(response.status, 200)
         # Access-Control-Allow-Headers must be compared in case-insensitive
         # way.
@@ -945,7 +920,7 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
             "content-type".upper())
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -960,9 +935,9 @@ class TestMain(AioAiohttpAppTestBase):
             frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
                       .upper().split(",")),
             {"X-Header".upper(), "content-type".upper()})
-        self.assertEqual((yield from response.text()), "")
+        self.assertEqual(await response.text(), "")
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -976,11 +951,10 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers)
         self.assertIn(
             "headers are not allowed: TEST",
-            (yield from response.text()))
+            await response.text())
 
     @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_headers(self):
+    async def test_preflight_request_headers(self):
         """Test CORS preflight request handlers handling."""
         app = web.Application()
         cors = setup(app, defaults={
@@ -994,9 +968,9 @@ class TestMain(AioAiohttpAppTestBase):
         resource = cors.add(app.router.add_resource("/"))
         cors.add(resource.add_route("PUT", handler))
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -1004,7 +978,7 @@ class TestMain(AioAiohttpAppTestBase):
                 hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
             }
         )
-        self.assertEqual((yield from response.text()), "")
+        self.assertEqual(await response.text(), "")
         self.assertEqual(response.status, 200)
         # Access-Control-Allow-Headers must be compared in case-insensitive
         # way.
@@ -1012,7 +986,7 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
             "content-type".upper())
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -1027,9 +1001,9 @@ class TestMain(AioAiohttpAppTestBase):
             frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
                       .upper().split(",")),
             {"X-Header".upper(), "content-type".upper()})
-        self.assertEqual((yield from response.text()), "")
+        self.assertEqual(await response.text(), "")
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", self.server_url,
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -1043,11 +1017,10 @@ class TestMain(AioAiohttpAppTestBase):
             response.headers)
         self.assertIn(
             "headers are not allowed: TEST",
-            (yield from response.text()))
+            await response.text())
 
     @asynctest
-    @asyncio.coroutine
-    def test_static_route(self):
+    async def test_static_route(self):
         """Test a static route with CORS."""
         app = web.Application()
         cors = setup(app, defaults={
@@ -1063,9 +1036,9 @@ class TestMain(AioAiohttpAppTestBase):
         cors.add(app.router.add_static("/static", test_static_path,
                                        name='static'))
 
-        yield from self.create_server(app)
+        await self.create_server(app)
 
-        response = yield from self.session.request(
+        response = await self.session.request(
             "OPTIONS", URL(self.server_url) / "static/test_page.html",
             headers={
                 hdrs.ORIGIN: "http://example.org",
@@ -1073,7 +1046,7 @@ class TestMain(AioAiohttpAppTestBase):
                 hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
             }
         )
-        data = yield from response.text()
+        data = await response.text()
         self.assertEqual(response.status, 200)
         self.assertEqual(data, '')
 

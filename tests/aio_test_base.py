@@ -22,8 +22,7 @@ import functools
 import concurrent.futures
 
 
-@asyncio.coroutine
-def create_server(protocol_factory, loop=None, sock=None):
+async def create_server(protocol_factory, loop=None, sock=None):
     """Create server listening on random port"""
 
     if sock is None:
@@ -34,7 +33,7 @@ def create_server(protocol_factory, loop=None, sock=None):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    return (yield from loop.create_server(protocol_factory, sock=sock))
+    return await loop.create_server(protocol_factory, sock=sock)
 
 
 class AioTestBase(unittest.TestCase):

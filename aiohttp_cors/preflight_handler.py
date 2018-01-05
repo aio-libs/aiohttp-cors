@@ -1,5 +1,3 @@
-import asyncio
-
 from aiohttp import hdrs, web
 
 # Positive response to Access-Control-Allow-Credentials
@@ -41,12 +39,10 @@ class _PreflightHandler:
         # pylint: disable=bad-builtin
         return frozenset(filter(None, headers))
 
-    @asyncio.coroutine
-    def _get_config(self, request, origin, request_method):
+    async def _get_config(self, request, origin, request_method):
         raise NotImplementedError()
 
-    @asyncio.coroutine
-    def _preflight_handler(self, request: web.Request):
+    async def _preflight_handler(self, request: web.Request):
         """CORS preflight request handler"""
 
         # Handle according to part 6.2 of the CORS specification.
@@ -64,8 +60,7 @@ class _PreflightHandler:
         # CORS 6.2.5. Doing it out of order is not an error.
 
         try:
-            config = \
-                yield from self._get_config(request, origin, request_method)
+            config = await self._get_config(request, origin, request_method)
         except KeyError:
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "

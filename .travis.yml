@@ -41,7 +41,7 @@ _helpers:
   after_script: skip
   after_success: skip
 
-jobs
+jobs:
   include:
   - stage: lint
     <<: *_skip_steps

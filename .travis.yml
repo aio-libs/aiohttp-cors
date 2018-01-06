@@ -60,7 +60,7 @@ jobs:
       on:
         tags: true
         branch: master
-	skip_upload_docs: true
+        skip_upload_docs: true
 
 cache: pip
 

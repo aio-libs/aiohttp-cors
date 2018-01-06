@@ -21,7 +21,7 @@ before_script:
 - sleep 3 # give xvfb some time to start
 
 script:
-- pytest test
+- pytest tests
 
 after_success:
   codecov
@@ -66,3 +66,9 @@ cache: pip
 
 before_cache:
 - rm -f $HOME/.cache/pip/log/debug.log
+
+
+stages:
+- lint
+- test
+- deploy

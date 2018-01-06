@@ -1,0 +1,4 @@
+docutils==0.14
+flake8==3.5.0
+pygments==2.2.0
+-r common.txt

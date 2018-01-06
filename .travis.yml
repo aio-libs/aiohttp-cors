@@ -11,7 +11,7 @@ before_install:
 
 install:
 - pip install -U pip setuptools wheel
-- pip install -Ur requirements-dev.txt
+- pip install -r requirements/test.txt
 - pip install codecov
 
 before_script:
@@ -46,7 +46,7 @@ jobs:
   - stage: lint
     <<: *_skip_steps
     install:
-    - pip install docutils
+    - pip install -r requirements/lint.txt
     script:
     - python setup.py check -rms
     - flake8 aiohttp_cors setup.py tests

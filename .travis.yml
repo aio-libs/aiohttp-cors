@@ -45,7 +45,11 @@ jobs:
   include:
   - stage: lint
     <<: *_skip_steps
-    script: python setup.py check -rms    
+    install:
+    - pip install docutils
+    script:
+    - python setup.py check -rms
+    - flake8 aiohttp_cors setup.py tests
   - stage: deploy
     <<: *_skip_steps
     # This will prevent deploy unless it's a tagged commit:

@@ -2,23 +2,17 @@ version: 0.0.1.dev{build}
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.4"
-      PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.4"
-      PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.1"
+      PYTHON_VERSION: "3.5.3"
       PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.1"
+      PYTHON_VERSION: "3.5.3"
       PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.0"
+      PYTHON_VERSION: "3.6.2"
       PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.0"
+      PYTHON_VERSION: "3.6.2"
       PYTHON_ARCH: "64"
 
 install:
@@ -27,9 +21,9 @@ install:
   - "python --version"
   - "pip install -U pip setuptools wheel"
   - "pip list"
-  - "pip install -r requirements-dev.txt"
-  - "python setup.py develop"
+  - "pip install -r requirements/dev.txt"
+  - "pip install -e ."
 
 build: false
 test_script:
-  - "python setup.py test"
+  - "pytest tests"

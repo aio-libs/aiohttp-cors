@@ -17,9 +17,8 @@ class TestPreflightHandler(unittest.TestCase):
         self.loop.close()
 
     @asynctest
-    @asyncio.coroutine
-    def test_raises_when_handler_not_extend(self):
+    async def test_raises_when_handler_not_extend(self):
         request = mock.Mock()
         handler = _PreflightHandler()
         with self.assertRaises(NotImplementedError):
-            yield from handler._get_config(request, 'origin', 'GET')
+            await handler._get_config(request, 'origin', 'GET')

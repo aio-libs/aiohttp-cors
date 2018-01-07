@@ -23,8 +23,8 @@ CUSTOM_CONFIG = {
 
 
 class SimpleView(web.View, CorsViewMixin):
-    @asyncio.coroutine
-    def get(self):
+
+    async def get(self):
         return web.Response(text="Done")
 
 
@@ -32,8 +32,7 @@ class SimpleViewWithConfig(web.View, CorsViewMixin):
 
     cors_config = CLASS_CONFIG
 
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         return web.Response(text="Done")
 
 
@@ -41,13 +40,11 @@ class CustomMethodView(web.View, CorsViewMixin):
 
     cors_config = CLASS_CONFIG
 
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         return web.Response(text="Done")
 
     @custom_cors(CUSTOM_CONFIG)
-    @asyncio.coroutine
-    def post(self):
+    async def post(self):
         return web.Response(text="Done")
 
 
@@ -72,8 +69,7 @@ class TestCustomCors(unittest.TestCase):
             view.get_request_config(request, 'post')
 
     @asynctest
-    @asyncio.coroutine
-    def test_raises_forbidden_when_config_not_found(self):
+    async def test_raises_forbidden_when_config_not_found(self):
         self.app[APP_CONFIG_KEY].defaults = {}
         request = mock.Mock()
         request.app = self.app
@@ -84,7 +80,7 @@ class TestCustomCors(unittest.TestCase):
         view = SimpleView(request)
 
         with self.assertRaises(web.HTTPForbidden):
-            yield from view.options()
+            await view.options()
 
     def test_method_with_custom_cors(self):
         """Test adding resource with web.View as handler"""

@@ -14,7 +14,6 @@
 
 """AbstractRouterAdapter for aiohttp.web.UrlDispatcher.
 """
-import asyncio
 import collections
 import re
 
@@ -244,8 +243,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                 "Resource or ResourceRoute expected, got {!r}".format(
                     routing_entity))
 
-    @asyncio.coroutine
-    def get_preflight_request_config(
+    async def get_preflight_request_config(
             self,
             preflight_request: web.Request,
             origin: str,
@@ -416,8 +414,7 @@ class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
         self._route_config[route] = config
 
-    @asyncio.coroutine
-    def get_preflight_request_config(
+    async def get_preflight_request_config(
             self,
             preflight_request: web.Request,
             origin: str,
@@ -426,7 +423,7 @@ class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
         request = preflight_request.clone(method=requested_method)
         for route, config in self._route_config.items():
-            match_info, allowed_methods = yield from route.resource.resolve(
+            match_info, allowed_methods = await route.resource.resolve(
                 request)
             if match_info is not None:
                 return collections.ChainMap(config, self._default_config)

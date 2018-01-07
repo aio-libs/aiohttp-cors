@@ -15,7 +15,6 @@
 """Abstract base classes.
 """
 
-import asyncio
 from abc import ABCMeta, abstractmethod
 
 from aiohttp import web
@@ -82,9 +81,8 @@ class AbstractRouterAdapter(metaclass=ABCMeta):
         entity.
         """
 
-    @asyncio.coroutine
     @abstractmethod
-    def get_preflight_request_config(
+    async def get_preflight_request_config(
             self,
             preflight_request: web.Request,
             origin: str,

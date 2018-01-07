@@ -1,6 +1,5 @@
 language: python
 python:
-- 3.4
 - 3.5
 - 3.6
 
@@ -11,19 +10,18 @@ before_install:
   - sudo apt-get install -y chromium-browser chromium-chromedriver
 
 install:
-- pip install --upgrade pip setuptools wheel
-- pip install -Ur requirements-dev.txt
+- pip install -U pip setuptools wheel
+- pip install -r requirements/test.txt
 - pip install codecov
 
 before_script:
-  # Start X-server for Selenium tests.
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
+# Start X-server for Selenium tests.
+- "export DISPLAY=:99.0"
+- "sh -e /etc/init.d/xvfb start"
+- sleep 3 # give xvfb some time to start
 
 script:
-- '[ "$TYPE" != "test" ] || python setup.py test --addopts -v --addopts -s'
-- '[ "$TYPE" != "lint" ] || python setup.py check'
+- pytest tests
 
 after_success:
   codecov
@@ -32,27 +30,49 @@ env:
   global:
   - WEBDRIVER_CHROMEDRIVER_PATH=/usr/lib/chromium-browser/chromedriver
   matrix:
-  # PYTHONASYNCIODEBUG environment variable is considered as enabled if it
-  # is any non empty string.
-  - TYPE=test
 
-matrix:
+_helpers:
+- &_skip_steps
+  python: 3.5
+  before_install: skip
+  install: skip
+  before_script: skip
+  script: skip
+  after_script: skip
+  after_success: skip
+
+jobs:
   include:
-  # Environment to deploy project on PyPI.
-  - python: "3.5"
-    env: DEPLOY_ENV=1
+  - stage: lint
+    <<: *_skip_steps
+    install:
+    - pip install -r requirements/lint.txt
+    script:
+    - python setup.py check -rms
+    - flake8 aiohttp_cors setup.py tests
+  - stage: deploy
+    <<: *_skip_steps
+    # This will prevent deploy unless it's a tagged commit:
+    if: tag IS present
+    # Deploy on PyPI all tagged build on master branch.
+    deploy:
+      provider: pypi
+      user: aiohttp-cors-deploy
+      password:
+        secure: KViGT/W2vWRWZkV5bZYLiI3v/qXVRGEFAs8G1OMx/OhLvHTj8vO6pZ+hlzLi9zTnBTVHG2xEOrwtjiuHxpJMcDPAul3rn0fwSXy9BRDAeR7B7RIlvLxegMRTnWtsj5x8/VkqQDrPW5YWmuXFb4tDJ+LEkadUrkF9YhJvtUnSQcEOOHVvJa4DekMhZEVM8AKA+7AT9FibWZbJ5s8bTjLke77/eyX7+1DdgC7G++ZesK2HKS1vlM7fN+cWPyUFofXwcEc42rwQwJ5FY2saqTvPN5GBOMpXdaBUmSyYT64447TVFoINbAFuCa3tUeY7ZQpC6B8bHVqEGq+UAujUGU7uhid29CHV03PTFeupTZRscVDkL+IEUjK6Ft+x/B9eStVpKh9d5Yh8INZkdoHVmybJo62k/YHwxAu7ftG+q1bUAHwgKkukXa+ZpmSD2v6BggVUBS6qFwv6tnKpuI0jRsneEUXPmJVUHpv6lPzVRPW/lQDZqxUvESz9w9mitwBiMA7q8jyL9w4zJVKAETjo6llWGQ2wOLjaz3LwuQ8vDOKfWOdvk78W8Usw5amkp2invyidU/2+Y1hlekRuhaMEaUdd4GPmP8beOh7CEXJr5bD3QjbqOpOMi+d+3rYVR0NZMWxawgtUGMBb/8DUNq4sD4Na5G3sGSy+rHMtDAuMOOUlLoU=
+      distributions: sdist bdist_wheel
+      on:
+        tags: true
+        branch: master
+        skip_upload_docs: true
 
-  - python: "3.5"
-    env: TYPE=lint
+cache: pip
 
-# Deploy on PyPI all tagged build on master branch.
-deploy:
-  provider: pypi
-  user: aiohttp-cors-deploy
-  password:
-    secure: KViGT/W2vWRWZkV5bZYLiI3v/qXVRGEFAs8G1OMx/OhLvHTj8vO6pZ+hlzLi9zTnBTVHG2xEOrwtjiuHxpJMcDPAul3rn0fwSXy9BRDAeR7B7RIlvLxegMRTnWtsj5x8/VkqQDrPW5YWmuXFb4tDJ+LEkadUrkF9YhJvtUnSQcEOOHVvJa4DekMhZEVM8AKA+7AT9FibWZbJ5s8bTjLke77/eyX7+1DdgC7G++ZesK2HKS1vlM7fN+cWPyUFofXwcEc42rwQwJ5FY2saqTvPN5GBOMpXdaBUmSyYT64447TVFoINbAFuCa3tUeY7ZQpC6B8bHVqEGq+UAujUGU7uhid29CHV03PTFeupTZRscVDkL+IEUjK6Ft+x/B9eStVpKh9d5Yh8INZkdoHVmybJo62k/YHwxAu7ftG+q1bUAHwgKkukXa+ZpmSD2v6BggVUBS6qFwv6tnKpuI0jRsneEUXPmJVUHpv6lPzVRPW/lQDZqxUvESz9w9mitwBiMA7q8jyL9w4zJVKAETjo6llWGQ2wOLjaz3LwuQ8vDOKfWOdvk78W8Usw5amkp2invyidU/2+Y1hlekRuhaMEaUdd4GPmP8beOh7CEXJr5bD3QjbqOpOMi+d+3rYVR0NZMWxawgtUGMBb/8DUNq4sD4Na5G3sGSy+rHMtDAuMOOUlLoU=
-  distributions: sdist bdist_wheel
-  on:
-    tags: true
-    branch: master
-    condition: $DEPLOY_ENV = 1
+before_cache:
+- rm -f $HOME/.cache/pip/log/debug.log
+
+
+stages:
+- lint
+- test
+- deploy

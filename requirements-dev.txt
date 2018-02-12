@@ -2,7 +2,7 @@ aiohttp==3.0.1
 tox==2.9.1
 pytest==3.4.0
 pytest-cov==2.5.1
-pytest-runner==3.0
+pytest-runner==4.0
 pytest-flakes==2.0.0
 pytest-pylint==0.7.1
 flake8==3.5.0

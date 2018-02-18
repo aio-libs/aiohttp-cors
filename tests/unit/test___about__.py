@@ -15,15 +15,12 @@
 """Test aiohttp_cors package metainformation.
 """
 
-import unittest
 from pkg_resources import parse_version
 
 import aiohttp_cors
 
 
-class TestMetaInformation(unittest.TestCase):
-    """Test package metainformation"""
-    # pylint: disable=no-self-use
-    def test_version(self):
-        """Test package version string"""
-        parse_version(aiohttp_cors.__version__)
+def test_version():
+    """Test package version string"""
+    # not raised
+    parse_version(aiohttp_cors.__version__)

@@ -293,80 +293,78 @@ def xtest_simple_default(self):
         tests_descriptions, False, True)
 
 
+@pytest.fixture(params=[
+    (None,
+     {"http://client1.example.org": ResourceOptions(allow_credentials=True)}),
+    ({"http://client1.example.org": ResourceOptions(allow_credentials=True)},
+      None),
+])
+def app_for_credentials(make_app, request):
+    return make_app(*request.param)
+
+
 @asyncio.coroutine
-def xtest_simple_with_credentials(self):
-    """Test CORS simple requests with a route with enabled authorization.
+def test_cred_no_origin(test_client, app_for_credentials):
+    app = app_for_credentials
 
-    Route with enabled authorization must return
-    Origin: <origin as requested, NOT "*">
-    Access-Control-Allow-Credentials: true
-    """
+    client = yield from test_client(app)
 
-    client1 = "http://client1.example.org"
-    client2 = "http://client2.example.org"
+    resp = yield from client.get("/resource")
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
 
-    credential_tests = [
-        {
-            "name": "no origin header",
-            "not_in_response_headers": {
-                hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_cred_allowed_origin(test_client, app_for_credentials):
+    app = app_for_credentials
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client1.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS: "true"}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
                 hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-            }
-        },
-        {
-            "name": "allowed origin",
-            "request_headers": {
-                hdrs.ORIGIN: client1,
-            },
-            "in_response_headers": {
-                hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS: "true",
-            },
-            "not_in_response_headers": {
-                hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-            }
-        },
-        {
-            "name": "disallowed origin",
-            "request_headers": {
-                hdrs.ORIGIN: client2,
-            },
-            "not_in_response_headers": {
-                hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-            }
-        },
-    ]
+    }:
+        assert header_name not in resp.headers
 
-    tests_descriptions = [
-        {
-            "name": "route settings",
-            "defaults": None,
-            "route_config":
-                {
-                    client1: ResourceOptions(allow_credentials=True),
-                },
-            "tests": credential_tests,
-        },
-        {
-            "name": "cors default settings",
-            "defaults":
-                {
-                    client1: ResourceOptions(allow_credentials=True),
-                },
-            "route_config": None,
-            "tests": credential_tests,
-        },
-    ]
 
-    yield from self._run_simple_requests_tests(
-        tests_descriptions, False, False)
-    yield from self._run_simple_requests_tests(
-        tests_descriptions, True, False)
-    yield from self._run_simple_requests_tests(
-        tests_descriptions, False, True)
+@asyncio.coroutine
+def test_cred_disallowed_origin(test_client, app_for_credentials):
+    app = app_for_credentials
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client2.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
 
 
 @asyncio.coroutine

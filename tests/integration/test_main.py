@@ -488,23 +488,6 @@ def xtest_preflight_default(self):
                 },
             "tests": [
                 {
-                    "name": "origin and method",
-                    "request_headers": {
-                        hdrs.ORIGIN: client1,
-                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
-                    },
-                    "in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                        hdrs.ACCESS_CONTROL_ALLOW_METHODS: "GET",
-                    },
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        hdrs.ACCESS_CONTROL_MAX_AGE,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                    },
-                },
-                {
                     "name": "disallowed origin",
                     "request_headers": {
                         hdrs.ORIGIN: client2,
@@ -621,14 +604,11 @@ def test_preflight_default_no_origin_route(test_client):
 
     client = yield from test_client(app)
 
-    resp = yield from client.options("/resource", headers={
-                        hdrs.ORIGIN: "http://client1.example.org",
-                    })
+    resp = yield from client.options("/resource")
 
     assert resp.status == 403
     resp_text = yield from resp.text()
-    assert "'Access-Control-Request-Method' header is not specified"\
-        in resp_text
+    assert "origin header is not specified" in resp_text
 
     for header_name in {
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -718,11 +698,14 @@ def test_preflight_default_no_method_route(test_client):
 
     client = yield from test_client(app)
 
-    resp = yield from client.options("/resource")
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                    })
 
     assert resp.status == 403
     resp_text = yield from resp.text()
-    assert "origin header is not specified" in resp_text
+    assert "'Access-Control-Request-Method' header is not specified"\
+        in resp_text
 
     for header_name in {
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -730,6 +713,111 @@ def test_preflight_default_no_method_route(test_client):
                         hdrs.ACCESS_CONTROL_MAX_AGE,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_origin_and_method_resource(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    resource = cors.add(app.router.add_resource("/resource"))
+    cors.add(resource.add_route("GET", handler),
+             {"http://client1.example.org":
+                              ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
+                    })
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert '' == resp_text
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: "http://client1.example.org",
+            hdrs.ACCESS_CONTROL_ALLOW_METHODS: "GET"}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_origin_and_method_view(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    WebViewHandler.cors_config = {"http://client1.example.org":
+                                  ResourceOptions()}
+    cors.add(
+        app.router.add_route("*", "/resource", WebViewHandler),
+        webview=True)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
+                    })
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert '' == resp_text
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: "http://client1.example.org",
+            hdrs.ACCESS_CONTROL_ALLOW_METHODS: "GET"}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_origin_and_method_route(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    cors.add(
+        app.router.add_route("GET", "/resource", handler),
+        {"http://client1.example.org": ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
+                    })
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert '' == resp_text
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: "http://client1.example.org",
+            hdrs.ACCESS_CONTROL_ALLOW_METHODS: "GET"}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
                     }:
         assert header_name not in resp.headers

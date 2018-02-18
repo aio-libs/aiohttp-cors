@@ -25,6 +25,7 @@ import logging
 import webbrowser
 
 from aiohttp import web, hdrs
+import pytest
 
 import selenium.common.exceptions
 from selenium import webdriver
@@ -35,8 +36,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from aiohttp_cors import setup, ResourceOptions, CorsViewMixin
 
-from ..aio_test_base import create_server, AioTestBase, asynctest
+# from ..aio_test_base import create_server, AioTestBase, asynctest
 
+pytest.importorskip('undefined')
 
 class _ServerDescr:
     """Auxiliary class for storing server info"""

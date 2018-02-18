@@ -404,116 +404,6 @@ def xtest_simple_expose_headers(self):
     yield from self._run_simple_requests_tests(
         tests_descriptions, False, True)
 
-@asyncio.coroutine
-def _run_preflight_requests_tests(self,
-                                  tests_descriptions,
-                                  use_resources,
-                                  use_webview):
-    """Runs CORS preflight requests based on the passed tests descriptions.
-    """
-
-    @asyncio.coroutine
-    def run_test(test):
-        """Run single test"""
-
-        response = yield from self.session.options(
-            self.server_url + "resource",
-            headers=test.get("request_headers", {}))
-        self.assertEqual(response.status, test.get("response_status", 200))
-        response_text = yield from response.text()
-        in_response = test.get("in_response")
-        if in_response is not None:
-            self.assertIn(in_response, response_text)
-        else:
-            self.assertEqual(response_text, "")
-
-        for header_name, header_value in test.get(
-                "in_response_headers", {}).items():
-            self.assertEqual(
-                response.headers.get(header_name),
-                header_value)
-
-        for header_name in test.get("not_in_request_headers", {}).items():
-            self.assertNotIn(header_name, response.headers)
-
-    for test_descr in tests_descriptions:
-        with self.subTest(group_name=test_descr["name"]):
-            app = web.Application()
-            cors = _setup(app, defaults=test_descr["defaults"])
-
-            if use_resources:
-                resource = cors.add(app.router.add_resource("/resource"))
-                cors.add(resource.add_route("GET", handler),
-                         test_descr["route_config"])
-            elif use_webview:
-                WebViewHandler.cors_config = test_descr["route_config"]
-                cors.add(
-                    app.router.add_route("*", "/resource", WebViewHandler),
-                    webview=True)
-            else:
-                cors.add(
-                    app.router.add_route("GET", "/resource", handler),
-                    test_descr["route_config"])
-
-            yield from self.create_server(app)
-
-            try:
-                for test_data in test_descr["tests"]:
-                    with self.subTest(name=test_data["name"]):
-                        yield from run_test(test_data)
-            finally:
-                yield from self.shutdown_server()
-
-@asyncio.coroutine
-def xtest_preflight_default(self):
-    """Test CORS preflight requests with a route with the default
-    configuration.
-
-    The default configuration means that:
-      * no credentials are allowed,
-      * no headers are exposed,
-      * no client headers are allowed.
-    """
-
-    client1 = "http://client1.example.org"
-    client2 = "http://client2.example.org"
-
-    tests_descriptions = [
-        {
-            "name": "default",
-            "defaults": None,
-            "route_config":
-                {
-                    client1: ResourceOptions(),
-                },
-            "tests": [
-                {
-                    "name": "disallowed method",
-                    "request_headers": {
-                        hdrs.ORIGIN: client1,
-                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "POST",
-                    },
-                    "response_status": 403,
-                    "in_response": "request method 'POST' is not allowed",
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        hdrs.ACCESS_CONTROL_MAX_AGE,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                    },
-                },
-                ],
-        },
-    ]
-
-    yield from self._run_preflight_requests_tests(
-        tests_descriptions, False, False)
-    yield from self._run_preflight_requests_tests(
-        tests_descriptions, True, False)
-    yield from self._run_preflight_requests_tests(
-        tests_descriptions, False, True)
 
 @asyncio.coroutine
 def test_preflight_default_no_origin_resource(test_client):
@@ -889,6 +779,105 @@ def test_preflight_default_disallowed_origin_route(test_client):
     assert resp.status == 403
     resp_text = yield from resp.text()
     assert "origin 'http://client2.example.org' is not allowed" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_disallowed_method_resource(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    resource = cors.add(app.router.add_resource("/resource"))
+    cors.add(resource.add_route("GET", handler),
+             {"http://client1.example.org":
+                              ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "POST",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert ("request method 'POST' is not allowed for "
+            "'http://client1.example.org' origin" in resp_text)
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_disallowed_method_view(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    WebViewHandler.cors_config = {"http://client1.example.org":
+                                  ResourceOptions()}
+    cors.add(
+        app.router.add_route("*", "/resource", WebViewHandler),
+        webview=True)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "POST",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert ("request method 'POST' is not allowed for "
+            "'http://client1.example.org' origin" in resp_text)
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_disallowed_method_route(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    cors.add(
+        app.router.add_route("GET", "/resource", handler),
+        {"http://client1.example.org": ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "POST",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert ("request method 'POST' is not allowed for "
+            "'http://client1.example.org' origin" in resp_text)
 
     for header_name in {
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,

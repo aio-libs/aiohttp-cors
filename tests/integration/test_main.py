@@ -488,36 +488,6 @@ def xtest_preflight_default(self):
                 },
             "tests": [
                 {
-                    "name": "no origin",
-                    "response_status": 403,
-                    "in_response": "origin header is not specified",
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        hdrs.ACCESS_CONTROL_MAX_AGE,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                    },
-                },
-                {
-                    "name": "no method",
-                    "request_headers": {
-                        hdrs.ORIGIN: client1,
-                    },
-                    "response_status": 403,
-                    "in_response": "'Access-Control-Request-Method' "
-                                   "header is not specified",
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        hdrs.ACCESS_CONTROL_MAX_AGE,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                    },
-                },
-                {
                     "name": "origin and method",
                     "request_headers": {
                         hdrs.ORIGIN: client1,
@@ -579,6 +549,190 @@ def xtest_preflight_default(self):
         tests_descriptions, True, False)
     yield from self._run_preflight_requests_tests(
         tests_descriptions, False, True)
+
+@asyncio.coroutine
+def test_preflight_default_no_origin_resource(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    resource = cors.add(app.router.add_resource("/resource"))
+    cors.add(resource.add_route("GET", handler),
+             {"http://client1.example.org":
+                              ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource")
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin header is not specified" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_origin_view(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    WebViewHandler.cors_config = {"http://client1.example.org":
+                                  ResourceOptions()}
+    cors.add(
+        app.router.add_route("*", "/resource", WebViewHandler),
+        webview=True)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource")
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin header is not specified" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_origin_route(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    cors.add(
+        app.router.add_route("GET", "/resource", handler),
+        {"http://client1.example.org": ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                    })
+
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "'Access-Control-Request-Method' header is not specified"\
+        in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_method_resource(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    resource = cors.add(app.router.add_resource("/resource"))
+    cors.add(resource.add_route("GET", handler),
+             {"http://client1.example.org":
+                              ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "'Access-Control-Request-Method' header is not specified"\
+        in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_method_view(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    WebViewHandler.cors_config = {"http://client1.example.org":
+                                  ResourceOptions()}
+    cors.add(
+        app.router.add_route("*", "/resource", WebViewHandler),
+        webview=True)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "'Access-Control-Request-Method' header is not specified"\
+        in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_method_route(test_client):
+
+    app = web.Application()
+    cors = _setup(app, defaults=None)
+
+    cors.add(
+        app.router.add_route("GET", "/resource", handler),
+        {"http://client1.example.org": ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource")
+
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin header is not specified" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
 
 
 @asyncio.coroutine

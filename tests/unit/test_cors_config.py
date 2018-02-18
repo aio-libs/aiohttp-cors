@@ -46,7 +46,6 @@ def cors(app):
     })
 
 
-
 @pytest.fixture
 def get_route(app):
     return app.router.add_route(

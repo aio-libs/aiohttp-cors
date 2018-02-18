@@ -234,8 +234,12 @@ def _get_chrome_driver():
 @pytest.fixture(params=[(False, False),
                         (True, False),
                         (False, True)])
-def server(request):
-    return IntegrationServers(*request.param)
+def server(request, loop):
+    @asyncio.coroutine
+    def inner():
+        # to grab implicit loop
+        return IntegrationServers(*request.param)
+    return loop.run_until_complete(inner())
 
 
 @pytest.fixture(params=[webdriver.Firefox,

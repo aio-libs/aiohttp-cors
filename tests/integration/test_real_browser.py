@@ -201,7 +201,7 @@ class IntegrationServers:
         # Start servers.
         for server_name, server_descr in self.servers.items():
             handler = server_descr.app.make_handler()
-            server = yield from loop.create_server(
+            server = yield from self.loop.create_server(
                 handler,
                 sock=server_sockets[server_name])
             server_descr.handler = handler

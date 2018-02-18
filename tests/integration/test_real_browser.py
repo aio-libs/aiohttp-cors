@@ -34,7 +34,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
-from aiohttp_cors import setup, ResourceOptions, CorsViewMixin
+from aiohttp_cors import setup as _setup, ResourceOptions, CorsViewMixin
 
 
 class _ServerDescr:
@@ -177,7 +177,7 @@ class IntegrationServers:
             default_config = cors_default_configs.get(server_name)
             if default_config is None:
                 continue
-            server_descr.cors = setup(
+            server_descr.cors = _setup(
                 server_descr.app, defaults=default_config)
 
         # Add CORS routes.

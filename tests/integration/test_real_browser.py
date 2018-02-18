@@ -257,7 +257,7 @@ def driver(request):
 
 @asyncio.coroutine
 def test_in_webdriver(driver, server):
-    # TODO: Use pytest's fixtures to test use resources/not use resources.
+    loop = asyncio.get_event_loop()
     yield from server.start_servers()
 
     def selenium_thread():
@@ -283,14 +283,12 @@ def test_in_webdriver(driver, server):
         return json.loads(results_area.get_attribute("value"))
 
     try:
-        results = yield from self.loop.run_in_executor(
-            self.thread_pool_executor, selenium_thread)
+        results = yield from loop.run_in_executor(
+            None, selenium_thread)
 
-        self.assertEqual(results["status"], "success")
+        assert results["status"] == "success"
         for test_name, test_data in results["data"].items():
-            with self.subTest(group_name=test_name):
-                self.assertEqual(test_data["status"], "success",
-                                 msg=(test_name, test_data))
+            assert test_data["status"] == "success"
 
     finally:
         yield from server.stop_servers()

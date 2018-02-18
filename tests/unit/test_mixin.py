@@ -1,9 +1,9 @@
 import asyncio
-import unittest
 
 from unittest import mock
+
+import pytest
 from aiohttp import web
-from tests.aio_test_base import asynctest
 
 from aiohttp_cors import CorsConfig, APP_CONFIG_KEY
 from aiohttp_cors import ResourceOptions, CorsViewMixin, custom_cors
@@ -51,74 +51,80 @@ class CustomMethodView(web.View, CorsViewMixin):
         return web.Response(text="Done")
 
 
-class TestCustomCors(unittest.TestCase):
-    """Unit tests for CorsConfig"""
+@pytest.fixture
+def _app(loop):
+    return web.Application(loop=loop)
 
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        self.app = web.Application(loop=self.loop)
-        self.cors = CorsConfig(self.app, defaults=DEFAULT_CONFIG)
-        self.app[APP_CONFIG_KEY] = self.cors
 
-    def tearDown(self):
-        self.loop.close()
+@pytest.fixture
+def cors(_app):
+    ret = CorsConfig(_app, defaults=DEFAULT_CONFIG)
+    _app[APP_CONFIG_KEY] = ret
+    return ret
 
-    def test_raise_exception_when_cors_not_configure(self):
-        request = mock.Mock()
-        request.app = {}
-        view = CustomMethodView(request)
 
-        with self.assertRaises(ValueError):
-            view.get_request_config(request, 'post')
+@pytest.fixture
+def app(_app, cors):
+    # a trick to install a cors into app
+    return _app
 
-    @asynctest
-    @asyncio.coroutine
-    def test_raises_forbidden_when_config_not_found(self):
-        self.app[APP_CONFIG_KEY].defaults = {}
-        request = mock.Mock()
-        request.app = self.app
-        request.headers = {
-            'Origin': '*',
-            'Access-Control-Request-Method': 'GET'
-        }
-        view = SimpleView(request)
 
-        with self.assertRaises(web.HTTPForbidden):
-            yield from view.options()
+def test_raise_exception_when_cors_not_configure():
+    request = mock.Mock()
+    request.app = {}
+    view = CustomMethodView(request)
 
-    def test_method_with_custom_cors(self):
-        """Test adding resource with web.View as handler"""
-        request = mock.Mock()
-        request.app = self.app
-        view = CustomMethodView(request)
+    with pytest.raises(ValueError):
+        view.get_request_config(request, 'post')
 
-        self.assertTrue(hasattr(view.post, 'post_cors_config'))
-        self.assertTrue(asyncio.iscoroutinefunction(view.post))
-        config = view.get_request_config(request, 'post')
 
-        self.assertEqual(config.get('www.client1.com'),
-                         CUSTOM_CONFIG['www.client1.com'])
+@asyncio.coroutine
+def test_raises_forbidden_when_config_not_found(app):
+    app[APP_CONFIG_KEY].defaults = {}
+    request = mock.Mock()
+    request.app = app
+    request.headers = {
+        'Origin': '*',
+        'Access-Control-Request-Method': 'GET'
+    }
+    view = SimpleView(request)
 
-    def test_method_with_class_config(self):
-        """Test adding resource with web.View as handler"""
-        request = mock.Mock()
-        request.app = self.app
-        view = SimpleViewWithConfig(request)
+    with pytest.raises(web.HTTPForbidden):
+        yield from view.options()
 
-        self.assertFalse(hasattr(view.get, 'get_cors_config'))
-        config = view.get_request_config(request, 'get')
 
-        self.assertEqual(config.get('*'),
-                         CLASS_CONFIG['*'])
+def test_method_with_custom_cors(app):
+    """Test adding resource with web.View as handler"""
+    request = mock.Mock()
+    request.app = app
+    view = CustomMethodView(request)
 
-    def test_method_with_default_config(self):
-        """Test adding resource with web.View as handler"""
-        request = mock.Mock()
-        request.app = self.app
-        view = SimpleView(request)
+    assert hasattr(view.post, 'post_cors_config')
+    assert asyncio.iscoroutinefunction(view.post)
+    config = view.get_request_config(request, 'post')
 
-        self.assertFalse(hasattr(view.get, 'get_cors_config'))
-        config = view.get_request_config(request, 'get')
+    assert config.get('www.client1.com') == CUSTOM_CONFIG['www.client1.com']
 
-        self.assertEqual(config.get('*'),
-                         DEFAULT_CONFIG['*'])
+
+def test_method_with_class_config(app):
+    """Test adding resource with web.View as handler"""
+    request = mock.Mock()
+    request.app = app
+    view = SimpleViewWithConfig(request)
+
+    assert not hasattr(view.get, 'get_cors_config')
+    config = view.get_request_config(request, 'get')
+
+    assert config.get('*') ==CLASS_CONFIG['*']
+
+
+def test_method_with_default_config(app):
+    """Test adding resource with web.View as handler"""
+    request = mock.Mock()
+    request.app = app
+    view = SimpleView(request)
+
+    assert not hasattr(view.get, 'get_cors_config')
+    config = view.get_request_config(request, 'get')
+
+    assert config.get('*') == DEFAULT_CONFIG['*']

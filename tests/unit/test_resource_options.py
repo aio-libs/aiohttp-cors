@@ -15,46 +15,37 @@
 """aiohttp_cors.resource_options unit tests.
 """
 
-import unittest
+import pytest
 
 from aiohttp_cors.resource_options import ResourceOptions
 
 
-class TestResourceOptions(unittest.TestCase):
-    """Unit tests for ResourceOptions class"""
+def test_init_no_args():
+    """Test construction without arguments"""
+    opts = ResourceOptions()
 
-    def test_init_no_args(self):
-        """Test construction without arguments"""
-        opts = ResourceOptions()
+    assert not opts.allow_credentials
+    assert not opts.expose_headers
+    assert not opts.allow_headers
+    assert opts.max_age is None
 
-        self.assertFalse(opts.allow_credentials)
-        self.assertFalse(opts.expose_headers)
-        self.assertFalse(opts.allow_headers)
-        self.assertIsNone(opts.max_age)
 
-    def test_comparison(self):
-        self.assertTrue(ResourceOptions() == ResourceOptions())
-        self.assertFalse(ResourceOptions() != ResourceOptions())
-        self.assertFalse(
-            ResourceOptions(allow_credentials=True) == ResourceOptions())
-        self.assertTrue(
-            ResourceOptions(allow_credentials=True) != ResourceOptions())
+def test_comparison():
+    assert ResourceOptions() == ResourceOptions()
+    assert not (ResourceOptions() != ResourceOptions())
+    assert not (ResourceOptions(allow_credentials=True) == ResourceOptions())
+    assert ResourceOptions(allow_credentials=True) != ResourceOptions()
 
-    def test_allow_methods(self):
-        self.assertIsNone(ResourceOptions().allow_methods)
-        self.assertEqual(
-            ResourceOptions(allow_methods='*').allow_methods,
-            '*')
-        self.assertEqual(
-            ResourceOptions(allow_methods=[]).allow_methods,
-            frozenset())
-        self.assertEqual(
-            ResourceOptions(allow_methods=['get']).allow_methods,
+
+def test_allow_methods():
+    assert ResourceOptions().allow_methods is None
+    assert ResourceOptions(allow_methods='*').allow_methods == '*'
+    assert ResourceOptions(allow_methods=[]).allow_methods == frozenset()
+    assert (ResourceOptions(allow_methods=['get']).allow_methods ==
             frozenset(['GET']))
-        self.assertEqual(
-            ResourceOptions(allow_methods=['get', 'Post']).allow_methods,
+    assert (ResourceOptions(allow_methods=['get', 'Post']).allow_methods ==
             {'GET', 'POST'})
-        with self.assertRaises(ValueError):
-            ResourceOptions(allow_methods='GET')
+    with pytest.raises(ValueError):
+        ResourceOptions(allow_methods='GET')
 
 # TODO: test arguments parsing

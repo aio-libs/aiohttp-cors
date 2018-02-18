@@ -432,6 +432,53 @@ def xtest_simple_expose_headers(self):
 
 
 @asyncio.coroutine
+def test_simple_expose_headers_no_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions(
+                              expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource")
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin header is not specified" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_expose_headers_allowed_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions(
+                              expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource",
+                                     headers={hdrs.ORIGIN:
+                                              'http://client1.example.org'})
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin header is not specified" in resp_text
+
+    for hdr, val in {hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
+                     hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
+                     SERVER_CUSTOM_HEADER_NAME}.items():
+        assert resp.headers.gt(hdr) == val
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
 def test_preflight_default_no_origin(test_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})

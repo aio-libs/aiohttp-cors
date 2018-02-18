@@ -36,9 +36,6 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from aiohttp_cors import setup, ResourceOptions, CorsViewMixin
 
-# from ..aio_test_base import create_server, AioTestBase, asynctest
-
-pytest.importorskip('undefined')
 
 class _ServerDescr:
     """Auxiliary class for storing server info"""
@@ -234,125 +231,64 @@ def _get_chrome_driver():
     return driver
 
 
-class TestInBrowser(AioTestBase):
-    @asyncio.coroutine
-    def _test_in_webdriver(self, driver, use_resources, use_webview):
-        # TODO: Use pytest's fixtures to test use resources/not use resources.
-        servers = IntegrationServers(use_resources, use_webview)
-        yield from servers.start_servers()
+@pytest.fixture(params=[(False, False),
+                        (True, False),
+                        (False, True)])
+def server(request):
+    return IntegrationServers(*request.param)
 
-        def selenium_thread():
-            driver.get(servers.origin_server_url)
-            assert "aiohttp_cors" in driver.title
 
-            wait = WebDriverWait(driver, 10)
+@pytest.fixture(params=[webdriver.Firefox,
+                        _get_chrome_driver])
+def driver(request):
+    try:
+        driver = request.param()
+    except selenium.common.exceptions.WebDriverException:
+        pytest.skip("Driver is not supported")
 
-            run_button = wait.until(EC.element_to_be_clickable(
-                (By.ID, "runTestsButton")))
+    yield driver
+    driver.close()
 
-            # Start tests.
-            run_button.send_keys(Keys.RETURN)
 
-            # Wait while test will finish (until clear button is not
-            # activated).
-            wait.until(EC.element_to_be_clickable(
-                (By.ID, "clearResultsButton")))
+@asyncio.coroutine
+def test_in_webdriver(driver, server):
+    # TODO: Use pytest's fixtures to test use resources/not use resources.
+    yield from server.start_servers()
 
-            # Get results json
-            results_area = driver.find_element_by_id("results")
+    def selenium_thread():
+        driver.get(server.origin_server_url)
+        assert "aiohttp_cors" in driver.title
 
-            return json.loads(results_area.get_attribute("value"))
+        wait = WebDriverWait(driver, 10)
 
-        try:
-            results = yield from self.loop.run_in_executor(
-                self.thread_pool_executor, selenium_thread)
+        run_button = wait.until(EC.element_to_be_clickable(
+            (By.ID, "runTestsButton")))
 
-            self.assertEqual(results["status"], "success")
-            for test_name, test_data in results["data"].items():
-                with self.subTest(group_name=test_name):
-                    self.assertEqual(test_data["status"], "success",
-                                     msg=(test_name, test_data))
+        # Start tests.
+        run_button.send_keys(Keys.RETURN)
 
-        finally:
-            yield from servers.stop_servers()
+        # Wait while test will finish (until clear button is not
+        # activated).
+        wait.until(EC.element_to_be_clickable(
+            (By.ID, "clearResultsButton")))
 
-    @asynctest
-    @asyncio.coroutine
-    def test_firefox(self):
-        try:
-            driver = webdriver.Firefox()
-        except selenium.common.exceptions.WebDriverException:
-            raise unittest.SkipTest
+        # Get results json
+        results_area = driver.find_element_by_id("results")
 
-        try:
-            yield from self._test_in_webdriver(driver, False, False)
-        finally:
-            driver.close()
+        return json.loads(results_area.get_attribute("value"))
 
-    @asynctest
-    @asyncio.coroutine
-    def test_chromium(self):
-        try:
-            driver = _get_chrome_driver()
-        except selenium.common.exceptions.WebDriverException:
-            raise unittest.SkipTest
+    try:
+        results = yield from self.loop.run_in_executor(
+            self.thread_pool_executor, selenium_thread)
 
-        try:
-            yield from self._test_in_webdriver(driver, False, False)
-        finally:
-            driver.close()
+        self.assertEqual(results["status"], "success")
+        for test_name, test_data in results["data"].items():
+            with self.subTest(group_name=test_name):
+                self.assertEqual(test_data["status"], "success",
+                                 msg=(test_name, test_data))
 
-    @asynctest
-    @asyncio.coroutine
-    def test_firefox_resource(self):
-        try:
-            driver = webdriver.Firefox()
-        except selenium.common.exceptions.WebDriverException:
-            raise unittest.SkipTest
-
-        try:
-            yield from self._test_in_webdriver(driver, True, False)
-        finally:
-            driver.close()
-
-    @asynctest
-    @asyncio.coroutine
-    def test_chromium_resource(self):
-        try:
-            driver = _get_chrome_driver()
-        except selenium.common.exceptions.WebDriverException:
-            raise unittest.SkipTest
-
-        try:
-            yield from self._test_in_webdriver(driver, True, False)
-        finally:
-            driver.close()
-
-    @asynctest
-    @asyncio.coroutine
-    def test_firefox_webview(self):
-        try:
-            driver = webdriver.Firefox()
-        except selenium.common.exceptions.WebDriverException:
-            raise unittest.SkipTest
-
-        try:
-            yield from self._test_in_webdriver(driver, False, True)
-        finally:
-            driver.close()
-
-    @asynctest
-    @asyncio.coroutine
-    def test_chromium_webview(self):
-        try:
-            driver = _get_chrome_driver()
-        except selenium.common.exceptions.WebDriverException:
-            raise unittest.SkipTest
-
-        try:
-            yield from self._test_in_webdriver(driver, False, True)
-        finally:
-            driver.close()
+    finally:
+        yield from server.stop_servers()
 
 
 def _run_integration_server():

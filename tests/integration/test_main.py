@@ -370,68 +370,6 @@ def xtest_simple_with_credentials(self):
 
 
 @asyncio.coroutine
-def xtest_simple_expose_headers(self):
-    """Test CORS simple requests with a route that exposes header."""
-
-    client1 = "http://client1.example.org"
-    client2 = "http://client2.example.org"
-
-    tests_descriptions = [
-        {
-            "name": "default",
-            "defaults": None,
-            "route_config":
-                {
-                    client1: ResourceOptions(
-                        expose_headers=(SERVER_CUSTOM_HEADER_NAME,)),
-                },
-            "tests": [
-                {
-                    "name": "no origin header",
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                    }
-                },
-                {
-                    "name": "allowed origin",
-                    "request_headers": {
-                        hdrs.ORIGIN: client1,
-                    },
-                    "in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
-                            SERVER_CUSTOM_HEADER_NAME,
-                    },
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                    }
-                },
-                {
-                    "name": "not allowed origin",
-                    "request_headers": {
-                        hdrs.ORIGIN: client2,
-                    },
-                    "not_in_response_headers": {
-                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                    }
-                },
-                ],
-        },
-    ]
-
-    yield from self._run_simple_requests_tests(
-        tests_descriptions, False, False)
-    yield from self._run_simple_requests_tests(
-        tests_descriptions, True, False)
-    yield from self._run_simple_requests_tests(
-        tests_descriptions, False, True)
-
-
-@asyncio.coroutine
 def test_simple_expose_headers_no_origin(test_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions(
@@ -439,10 +377,10 @@ def test_simple_expose_headers_no_origin(test_client, make_app):
 
     client = yield from test_client(app)
 
-    resp = yield from client.options("/resource")
-    assert resp.status == 403
+    resp = yield from client.get("/resource")
+    assert resp.status == 200
     resp_text = yield from resp.text()
-    assert "origin header is not specified" in resp_text
+    assert resp_text == TEST_BODY
 
     for header_name in {
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -460,19 +398,43 @@ def test_simple_expose_headers_allowed_origin(test_client, make_app):
 
     client = yield from test_client(app)
 
-    resp = yield from client.options("/resource",
-                                     headers={hdrs.ORIGIN:
-                                              'http://client1.example.org'})
-    assert resp.status == 403
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client1.example.org'})
+    assert resp.status == 200
     resp_text = yield from resp.text()
-    assert "origin header is not specified" in resp_text
+    assert resp_text == TEST_BODY
 
-    for hdr, val in {hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                     hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
-                     SERVER_CUSTOM_HEADER_NAME}.items():
-        assert resp.headers.gt(hdr) == val
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
+            SERVER_CUSTOM_HEADER_NAME}.items():
+        assert resp.headers.get(hdr) == val
 
     for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_expose_headers_not_allowed_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions(
+                              expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client2.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
                     }:
         assert header_name not in resp.headers

@@ -16,8 +16,8 @@
 """
 
 import asyncio
-import unittest
 
+import pytest
 from aiohttp import web
 
 from aiohttp_cors import CorsConfig, ResourceOptions, CorsViewMixin
@@ -34,73 +34,85 @@ class _View(web.View, CorsViewMixin):
         return web.Response(text="Done")
 
 
-class TestCorsConfig(unittest.TestCase):
-    """Unit tests for CorsConfig"""
+@pytest.fixture
+def app(loop):
+    return web.Application(loop=loop)
 
-    def setUp(self):
-        self.loop = asyncio.new_event_loop()
-        self.app = web.Application(loop=self.loop)
-        self.cors = CorsConfig(self.app, defaults={
-            "*": ResourceOptions()
-        })
-        self.get_route = self.app.router.add_route(
-            "GET", "/get_path", _handler)
-        self.options_route = self.app.router.add_route(
-            "OPTIONS", "/options_path", _handler)
 
-    def tearDown(self):
-        self.loop.close()
+@pytest.fixture
+def cors(app):
+    return CorsConfig(app, defaults={
+        "*": ResourceOptions()
+    })
 
-    def test_add_options_route(self):
-        """Test configuring OPTIONS route"""
 
-        with self.assertRaises(RuntimeError):
-            self.cors.add(self.options_route.resource)
+@pytest.fixture
+def get_route(app):
+    return app.router.add_route(
+        "GET", "/get_path", _handler)
 
-    def test_plain_named_route(self):
-        """Test adding plain named route."""
-        # Adding CORS routes should not introduce new named routes.
-        self.assertEqual(len(self.app.router.keys()), 0)
-        route = self.app.router.add_route(
-            "GET", "/{name}", _handler, name="dynamic_named_route")
-        self.assertEqual(len(self.app.router.keys()), 1)
-        self.cors.add(route)
-        self.assertEqual(len(self.app.router.keys()), 1)
 
-    def test_dynamic_named_route(self):
-        """Test adding dynamic named route."""
-        self.assertEqual(len(self.app.router.keys()), 0)
-        route = self.app.router.add_route(
-            "GET", "/{name}", _handler, name="dynamic_named_route")
-        self.assertEqual(len(self.app.router.keys()), 1)
-        self.cors.add(route)
-        self.assertEqual(len(self.app.router.keys()), 1)
+@pytest.fixture
+def options_route(app):
+    return app.router.add_route(
+        "OPTIONS", "/options_path", _handler)
 
-    def test_static_named_route(self):
-        """Test adding dynamic named route."""
-        self.assertEqual(len(self.app.router.keys()), 0)
-        route = self.app.router.add_static(
-            "/file", "/", name="dynamic_named_route")
-        self.assertEqual(len(self.app.router.keys()), 1)
-        self.cors.add(route)
-        self.assertEqual(len(self.app.router.keys()), 1)
 
-    def test_static_resource(self):
-        """Test adding static resource."""
-        self.assertEqual(len(self.app.router.keys()), 0)
-        self.app.router.add_static(
-            "/file", "/", name="dynamic_named_route")
-        self.assertEqual(len(self.app.router.keys()), 1)
-        for resource in list(self.app.router.resources()):
-            if issubclass(resource, web.StaticResource):
-                self.cors.add(resource)
-        self.assertEqual(len(self.app.router.keys()), 1)
+def test_add_options_route(cors, options_route):
+    """Test configuring OPTIONS route"""
 
-    def test_web_view_resource(self):
-        """Test adding resource with web.View as handler"""
-        self.assertEqual(len(self.app.router.keys()), 0)
-        route = self.app.router.add_route(
-            "GET", "/{name}", _View, name="dynamic_named_route")
-        self.assertEqual(len(self.app.router.keys()), 1)
-        self.cors.add(route)
-        self.assertEqual(len(self.app.router.keys()), 1)
+    with pytest.raises(RuntimeError):
+        cors.add(options_route.resource)
+
+
+def test_plain_named_route(app, cors):
+    """Test adding plain named route."""
+    # Adding CORS routes should not introduce new named routes.
+    assert len(app.router.keys()) == 0
+    route = app.router.add_route(
+        "GET", "/{name}", _handler, name="dynamic_named_route")
+    assert len(app.router.keys()) == 1
+    cors.add(route)
+    assert len(app.router.keys()) == 1
+
+
+def test_dynamic_named_route(app, cors):
+    """Test adding dynamic named route."""
+    assert len(app.router.keys()) == 0
+    route = app.router.add_route(
+        "GET", "/{name}", _handler, name="dynamic_named_route")
+    assert len(app.router.keys()) == 1
+    cors.add(route)
+    assert len(app.router.keys()) == 1
+
+
+def test_static_named_route(app, cors):
+    """Test adding dynamic named route."""
+    assert len(app.router.keys()) == 0
+    route = app.router.add_static(
+        "/file", "/", name="dynamic_named_route")
+    assert len(app.router.keys()) == 1
+    cors.add(route)
+    assert len(app.router.keys()) == 1
+
+
+def test_static_resource(app, cors):
+    """Test adding static resource."""
+    assert len(app.router.keys()) == 0
+    app.router.add_static(
+        "/file", "/", name="dynamic_named_route")
+    assert len(app.router.keys()) == 1
+    for resource in list(app.router.resources()):
+        if issubclass(resource, web.StaticResource):
+            cors.add(resource)
+    assert len(app.router.keys()) == 1
+
+
+def test_web_view_resource(app, cors):
+    """Test adding resource with web.View as handler"""
+    assert len(app.router.keys()) == 0
+    route = app.router.add_route(
+        "GET", "/{name}", _View, name="dynamic_named_route")
+    assert len(app.router.keys()) == 1
+    cors.add(route)
+    assert len(app.router.keys()) == 1

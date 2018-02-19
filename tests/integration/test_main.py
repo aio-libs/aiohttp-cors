@@ -18,15 +18,13 @@
 import asyncio
 import pathlib
 
-from yarl import URL
-
-from tests.aio_test_base import AioTestBase, create_server, asynctest
-
 import aiohttp
+import pytest
+
 from aiohttp import web
 from aiohttp import hdrs
 
-from aiohttp_cors import setup, ResourceOptions, CorsViewMixin
+from aiohttp_cors import setup as _setup, ResourceOptions, CorsViewMixin
 
 
 TEST_BODY = "Hello, world"
@@ -58,1024 +56,894 @@ class WebViewHandler(web.View, CorsViewMixin):
         return response
 
 
-class AioAiohttpAppTestBase(AioTestBase):
-    """Base class for tests that create single aiohttp server.
+@pytest.fixture(params=['resource', 'view', 'route'])
+def make_app(loop, request):
+    def inner(defaults, route_config):
+        app = web.Application(loop=loop)
+        cors = _setup(app, defaults=defaults)
 
-    Class manages server creation using create_server() method and proper
-    server shutdown.
+        if request.param == 'resource':
+            resource = cors.add(app.router.add_resource("/resource"))
+            cors.add(resource.add_route("GET", handler), route_config)
+        elif request.param == 'view':
+            WebViewHandler.cors_config = route_config
+            cors.add(
+                app.router.add_route("*", "/resource", WebViewHandler),
+                webview=True)
+        elif request.param == 'route':
+            cors.add(
+                app.router.add_route("GET", "/resource", handler),
+                route_config)
+        else:
+            raise RuntimeError('unknown parameter {}'.format(request.param))
+
+        return app
+
+    return inner
+
+
+@asyncio.coroutine
+def test_message_roundtrip(test_client):
+    """Test that aiohttp server is correctly setup in the base class."""
+
+    app = web.Application()
+    app.router.add_route("GET", "/", handler)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get('/')
+    assert resp.status == 200
+    data = yield from resp.text()
+
+    assert data == TEST_BODY
+
+
+@asyncio.coroutine
+def test_dummy_setup(test_server):
+    """Test a dummy configuration."""
+    app = web.Application()
+    _setup(app)
+
+    yield from test_server(app)
+
+
+@asyncio.coroutine
+def test_dummy_setup_roundtrip(test_client):
+    """Test a dummy configuration with a message round-trip."""
+    app = web.Application()
+    _setup(app)
+
+    app.router.add_route("GET", "/", handler)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get('/')
+    assert resp.status == 200
+    data = yield from resp.text()
+
+    assert data == TEST_BODY
+
+
+@asyncio.coroutine
+def test_dummy_setup_roundtrip_resource(test_client):
+    """Test a dummy configuration with a message round-trip."""
+    app = web.Application()
+    _setup(app)
+
+    app.router.add_resource("/").add_route("GET", handler)
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get('/')
+    assert resp.status == 200
+    data = yield from resp.text()
+
+    assert data == TEST_BODY
+
+
+@asyncio.coroutine
+def test_simple_no_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource")
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_allowed_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client1.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+    }.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_not_allowed_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client2.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_explicit_port(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client1.example.org:80'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_different_scheme(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'https://client1.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@pytest.fixture(params=[
+    (None,
+     {"http://client1.example.org": ResourceOptions(allow_credentials=True)}),
+    ({"http://client1.example.org": ResourceOptions(allow_credentials=True)},
+      None),
+])
+def app_for_credentials(make_app, request):
+    return make_app(*request.param)
+
+
+@asyncio.coroutine
+def test_cred_no_origin(test_client, app_for_credentials):
+    app = app_for_credentials
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource")
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_cred_allowed_origin(test_client, app_for_credentials):
+    app = app_for_credentials
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client1.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS: "true"}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+                hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_cred_disallowed_origin(test_client, app_for_credentials):
+    app = app_for_credentials
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client2.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_expose_headers_no_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions(
+                              expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource")
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_expose_headers_allowed_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions(
+                              expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client1.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
+            SERVER_CUSTOM_HEADER_NAME}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_simple_expose_headers_not_allowed_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions(
+                              expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.get("/resource",
+                                 headers={hdrs.ORIGIN:
+                                          'http://client2.example.org'})
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert resp_text == TEST_BODY
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_origin(test_client, make_app):
+    app = make_app(None, {"http://client1.example.org":
+                          ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource")
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin header is not specified" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_no_method(test_client, make_app):
+
+    app = make_app(None,{"http://client1.example.org":
+                         ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "'Access-Control-Request-Method' header is not specified"\
+        in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_origin_and_method(test_client, make_app):
+
+    app = make_app(None,{"http://client1.example.org":
+                         ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
+                    })
+    assert resp.status == 200
+    resp_text = yield from resp.text()
+    assert '' == resp_text
+
+    for hdr, val in {
+            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: "http://client1.example.org",
+            hdrs.ACCESS_CONTROL_ALLOW_METHODS: "GET"}.items():
+        assert resp.headers.get(hdr) == val
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_disallowed_origin(test_client, make_app):
+
+    app = make_app(None,{"http://client1.example.org":
+                         ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client2.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert "origin 'http://client2.example.org' is not allowed" in resp_text
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_default_disallowed_method(test_client, make_app):
+
+    app = make_app(None,{"http://client1.example.org":
+                         ResourceOptions()})
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options("/resource", headers={
+                        hdrs.ORIGIN: "http://client1.example.org",
+                        hdrs.ACCESS_CONTROL_REQUEST_METHOD: "POST",
+                    })
+    assert resp.status == 403
+    resp_text = yield from resp.text()
+    assert ("request method 'POST' is not allowed for "
+            "'http://client1.example.org' origin" in resp_text)
+
+    for header_name in {
+                        hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.ACCESS_CONTROL_MAX_AGE,
+                        hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
+                        hdrs.ACCESS_CONTROL_ALLOW_METHODS,
+                        hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                    }:
+        assert header_name not in resp.headers
+
+
+@asyncio.coroutine
+def test_preflight_request_multiple_routes_with_one_options(test_client):
+    """Test CORS preflight handling on resource that is available through
+    several routes.
     """
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
 
-    def setUp(self):
-        super().setUp()
+    cors.add(app.router.add_route("GET", "/{name}", handler))
+    cors.add(app.router.add_route("PUT", "/{name}", handler))
 
-        self.handler = None
-        self.app = None
-        self.url = None
+    client = yield from test_client(app)
 
-        self.server = None
+    resp = yield from client.options(
+        "/user",
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+        }
+    )
+    assert resp.status == 200
 
-        self.session = aiohttp.ClientSession(loop=self.loop)
-
-    def tearDown(self):
-        self.session.close()
-
-        if self.server is not None:
-            self.loop.run_until_complete(self.shutdown_server())
-
-        super().tearDown()
-
-    @asyncio.coroutine
-    def create_server(self, app: web.Application):
-        """Create server listening on random port."""
-
-        assert self.app is None
-        self.app = app
-
-        assert self.handler is None
-        self.handler = app.make_handler()
-
-        self.server = (yield from create_server(self.handler, self.loop))
-
-        return self.server
-
-    @property
-    def server_url(self):
-        """Server navigatable URL."""
-        assert self.server is not None
-        hostaddr, port = self.server.sockets[0].getsockname()
-        return "http://{host}:{port}/".format(host=hostaddr, port=port)
-
-    @asyncio.coroutine
-    def shutdown_server(self):
-        """Shutdown server."""
-        assert self.server is not None
-
-        self.server.close()
-        yield from self.handler.shutdown()
-        yield from self.server.wait_closed()
-        yield from self.app.cleanup()
-
-        self.server = None
-        self.app = None
-        self.handler = None
+    data = yield from resp.text()
+    assert data == ""
 
 
-class TestMain(AioAiohttpAppTestBase):
-    """Tests CORS server by issuing CORS requests."""
+@asyncio.coroutine
+def test_preflight_request_mult_routes_with_one_options_resource(test_client):
+    """Test CORS preflight handling on resource that is available through
+    several routes.
+    """
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
 
-    @asynctest
-    @asyncio.coroutine
-    def test_message_roundtrip(self):
-        """Test that aiohttp server is correctly setup in the base class."""
+    resource = cors.add(app.router.add_resource("/{name}"))
+    cors.add(resource.add_route("GET", handler))
+    cors.add(resource.add_route("PUT", handler))
 
-        app = web.Application()
+    client = yield from test_client(app)
 
-        app.router.add_route("GET", "/", handler)
+    resp = yield from client.options(
+        "/user",
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+        }
+    )
+    assert resp.status == 200
 
-        yield from self.create_server(app)
+    data = yield from resp.text()
+    assert data == ""
 
-        response = yield from self.session.request("GET", self.server_url)
-        self.assertEqual(response.status, 200)
-        data = yield from response.text()
 
-        self.assertEqual(data, TEST_BODY)
+@asyncio.coroutine
+def test_preflight_request_max_age_resource(test_client):
+    """Test CORS preflight handling on resource that is available through
+    several routes.
+    """
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            max_age=1200
+        )
+    })
 
-    @asynctest
-    @asyncio.coroutine
-    def test_dummy_setup(self):
-        """Test a dummy configuration."""
-        app = web.Application()
-        setup(app)
+    resource = cors.add(app.router.add_resource("/{name}"))
+    cors.add(resource.add_route("GET", handler))
 
-        yield from self.create_server(app)
+    client = yield from test_client(app)
 
-    @asynctest
-    @asyncio.coroutine
-    def test_dummy_setup_roundtrip(self):
-        """Test a dummy configuration with a message round-trip."""
-        app = web.Application()
-        setup(app)
+    resp = yield from client.options(
+        "/user",
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"
+        }
+    )
+    assert resp.status == 200
+    assert resp.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper() == "1200"
 
-        app.router.add_route("GET", "/", handler)
+    data = yield from resp.text()
+    assert data == ""
 
-        yield from self.create_server(app)
 
-        response = yield from self.session.request("GET", self.server_url)
-        self.assertEqual(response.status, 200)
-        data = yield from response.text()
+@asyncio.coroutine
+def test_preflight_request_max_age_webview(test_client):
+    """Test CORS preflight handling on resource that is available through
+    several routes.
+    """
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            max_age=1200
+        )
+    })
 
-        self.assertEqual(data, TEST_BODY)
-
-    @asynctest
-    @asyncio.coroutine
-    def test_dummy_setup_roundtrip_resource(self):
-        """Test a dummy configuration with a message round-trip."""
-        app = web.Application()
-        setup(app)
-
-        app.router.add_resource("/").add_route("GET", handler)
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request("GET", self.server_url)
-        self.assertEqual(response.status, 200)
-        data = yield from response.text()
-
-        self.assertEqual(data, TEST_BODY)
-
-    @asyncio.coroutine
-    def _run_simple_requests_tests(self,
-                                   tests_descriptions,
-                                   use_resources,
-                                   use_webview):
-        """Runs CORS simple requests (without a preflight request) based
-        on the passed tests descriptions.
-        """
-
+    class TestView(web.View, CorsViewMixin):
         @asyncio.coroutine
-        def run_test(test):
-            """Run single test"""
+        def get(self):
+            resp = web.Response(text=TEST_BODY)
 
-            response = yield from self.session.get(
-                self.server_url + "resource",
-                headers=test.get("request_headers", {}))
-            self.assertEqual(response.status, 200)
-            self.assertEqual((yield from response.text()), TEST_BODY)
+            resp.headers[SERVER_CUSTOM_HEADER_NAME] = \
+                SERVER_CUSTOM_HEADER_VALUE
 
-            for header_name, header_value in test.get(
-                    "in_response_headers", {}).items():
-                with self.subTest(header_name=header_name):
-                    self.assertEqual(
-                        response.headers.get(header_name),
-                        header_value)
+            return resp
 
-            for header_name in test.get("not_in_request_headers", {}).items():
-                self.assertNotIn(header_name, response.headers)
+    cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
 
-        for test_descr in tests_descriptions:
-            with self.subTest(group_name=test_descr["name"]):
-                app = web.Application()
-                cors = setup(app, defaults=test_descr["defaults"])
+    client = yield from test_client(app)
 
-                if use_resources:
-                    resource = cors.add(app.router.add_resource("/resource"))
-                    cors.add(resource.add_route("GET", handler),
-                             test_descr["route_config"])
-                elif use_webview:
-                    WebViewHandler.cors_config = test_descr["route_config"]
-                    cors.add(
-                        app.router.add_route("*", "/resource", WebViewHandler),
-                        webview=True)
-                else:
-                    cors.add(
-                        app.router.add_route("GET", "/resource", handler),
-                        test_descr["route_config"])
+    resp = yield from client.options(
+        "/user",
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"
+        }
+    )
+    assert resp.status == 200
+    assert resp.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper() == "1200"
 
-                yield from self.create_server(app)
+    data = yield from resp.text()
+    assert data == ""
 
-                try:
-                    for test_data in test_descr["tests"]:
-                        with self.subTest(name=test_data["name"]):
-                            yield from run_test(test_data)
-                finally:
-                    yield from self.shutdown_server()
 
-    @asynctest
-    @asyncio.coroutine
-    def test_simple_default(self):
-        """Test CORS simple requests with a route with the default
-        configuration.
+@asyncio.coroutine
+def test_preflight_request_mult_routes_with_one_options_webview(test_client):
+    """Test CORS preflight handling on resource that is available through
+    several routes.
+    """
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+        )
+    })
 
-        The default configuration means that:
-          * no credentials are allowed,
-          * no headers are exposed,
-          * no client headers are allowed.
-        """
-
-        client1 = "http://client1.example.org"
-        client2 = "http://client2.example.org"
-        client1_80 = "http://client1.example.org:80"
-        client1_https = "https://client2.example.org"
-
-        tests_descriptions = [
-            {
-                "name": "default",
-                "defaults": None,
-                "route_config":
-                    {
-                        client1: ResourceOptions(),
-                    },
-                "tests": [
-                    {
-                        "name": "no origin header",
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    {
-                        "name": "allowed origin",
-                        "request_headers": {
-                            hdrs.ORIGIN: client1,
-                        },
-                        "in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    {
-                        "name": "not allowed origin",
-                        "request_headers": {
-                            hdrs.ORIGIN: client2,
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    {
-                        "name": "explicitly specified default port",
-                        # CORS specification says, that origins may compared
-                        # as strings, so "example.org:80" is not the same as
-                        # "example.org".
-                        "request_headers": {
-                            hdrs.ORIGIN: client1_80,
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    {
-                        "name": "different scheme",
-                        "request_headers": {
-                            hdrs.ORIGIN: client1_https,
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    ],
-            },
-        ]
-
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, False, False)
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, True, False)
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, False, True)
-
-    @asynctest
-    @asyncio.coroutine
-    def test_simple_with_credentials(self):
-        """Test CORS simple requests with a route with enabled authorization.
-
-        Route with enabled authorization must return
-        Origin: <origin as requested, NOT "*">
-        Access-Control-Allow-Credentials: true
-        """
-
-        client1 = "http://client1.example.org"
-        client2 = "http://client2.example.org"
-
-        credential_tests = [
-            {
-                "name": "no origin header",
-                "not_in_response_headers": {
-                    hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                    hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                    hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                }
-            },
-            {
-                "name": "allowed origin",
-                "request_headers": {
-                    hdrs.ORIGIN: client1,
-                },
-                "in_response_headers": {
-                    hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                    hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS: "true",
-                },
-                "not_in_response_headers": {
-                    hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                }
-            },
-            {
-                "name": "disallowed origin",
-                "request_headers": {
-                    hdrs.ORIGIN: client2,
-                },
-                "not_in_response_headers": {
-                    hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                    hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                    hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                }
-            },
-        ]
-
-        tests_descriptions = [
-            {
-                "name": "route settings",
-                "defaults": None,
-                "route_config":
-                    {
-                        client1: ResourceOptions(allow_credentials=True),
-                    },
-                "tests": credential_tests,
-            },
-            {
-                "name": "cors default settings",
-                "defaults":
-                    {
-                        client1: ResourceOptions(allow_credentials=True),
-                    },
-                "route_config": None,
-                "tests": credential_tests,
-            },
-        ]
-
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, False, False)
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, True, False)
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, False, True)
-
-    @asynctest
-    @asyncio.coroutine
-    def test_simple_expose_headers(self):
-        """Test CORS simple requests with a route that exposes header."""
-
-        client1 = "http://client1.example.org"
-        client2 = "http://client2.example.org"
-
-        tests_descriptions = [
-            {
-                "name": "default",
-                "defaults": None,
-                "route_config":
-                    {
-                        client1: ResourceOptions(
-                            expose_headers=(SERVER_CUSTOM_HEADER_NAME,)),
-                    },
-                "tests": [
-                    {
-                        "name": "no origin header",
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    {
-                        "name": "allowed origin",
-                        "request_headers": {
-                            hdrs.ORIGIN: client1,
-                        },
-                        "in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
-                                SERVER_CUSTOM_HEADER_NAME,
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    {
-                        "name": "not allowed origin",
-                        "request_headers": {
-                            hdrs.ORIGIN: client2,
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                        }
-                    },
-                    ],
-            },
-        ]
-
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, False, False)
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, True, False)
-        yield from self._run_simple_requests_tests(
-            tests_descriptions, False, True)
-
-    @asyncio.coroutine
-    def _run_preflight_requests_tests(self,
-                                      tests_descriptions,
-                                      use_resources,
-                                      use_webview):
-        """Runs CORS preflight requests based on the passed tests descriptions.
-        """
-
+    class TestView(web.View, CorsViewMixin):
         @asyncio.coroutine
-        def run_test(test):
-            """Run single test"""
+        def get(self):
+            resp = web.Response(text=TEST_BODY)
 
-            response = yield from self.session.options(
-                self.server_url + "resource",
-                headers=test.get("request_headers", {}))
-            self.assertEqual(response.status, test.get("response_status", 200))
-            response_text = yield from response.text()
-            in_response = test.get("in_response")
-            if in_response is not None:
-                self.assertIn(in_response, response_text)
-            else:
-                self.assertEqual(response_text, "")
+            resp.headers[SERVER_CUSTOM_HEADER_NAME] = \
+                SERVER_CUSTOM_HEADER_VALUE
 
-            for header_name, header_value in test.get(
-                    "in_response_headers", {}).items():
-                self.assertEqual(
-                    response.headers.get(header_name),
-                    header_value)
+            return resp
 
-            for header_name in test.get("not_in_request_headers", {}).items():
-                self.assertNotIn(header_name, response.headers)
+        put = get
 
-        for test_descr in tests_descriptions:
-            with self.subTest(group_name=test_descr["name"]):
-                app = web.Application()
-                cors = setup(app, defaults=test_descr["defaults"])
+    cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
 
-                if use_resources:
-                    resource = cors.add(app.router.add_resource("/resource"))
-                    cors.add(resource.add_route("GET", handler),
-                             test_descr["route_config"])
-                elif use_webview:
-                    WebViewHandler.cors_config = test_descr["route_config"]
-                    cors.add(
-                        app.router.add_route("*", "/resource", WebViewHandler),
-                        webview=True)
-                else:
-                    cors.add(
-                        app.router.add_route("GET", "/resource", handler),
-                        test_descr["route_config"])
+    client = yield from test_client(app)
 
-                yield from self.create_server(app)
+    resp = yield from client.options(
+        "/user",
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
+        }
+    )
+    assert resp.status == 200
 
-                try:
-                    for test_data in test_descr["tests"]:
-                        with self.subTest(name=test_data["name"]):
-                            yield from run_test(test_data)
-                finally:
-                    yield from self.shutdown_server()
+    data = yield from resp.text()
+    assert data == ""
 
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_default(self):
-        """Test CORS preflight requests with a route with the default
-        configuration.
 
-        The default configuration means that:
-          * no credentials are allowed,
-          * no headers are exposed,
-          * no client headers are allowed.
-        """
-
-        client1 = "http://client1.example.org"
-        client2 = "http://client2.example.org"
-
-        tests_descriptions = [
-            {
-                "name": "default",
-                "defaults": None,
-                "route_config":
-                    {
-                        client1: ResourceOptions(),
-                    },
-                "tests": [
-                    {
-                        "name": "no origin",
-                        "response_status": 403,
-                        "in_response": "origin header is not specified",
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                            hdrs.ACCESS_CONTROL_MAX_AGE,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                        },
-                    },
-                    {
-                        "name": "no method",
-                        "request_headers": {
-                            hdrs.ORIGIN: client1,
-                        },
-                        "response_status": 403,
-                        "in_response": "'Access-Control-Request-Method' "
-                                       "header is not specified",
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                            hdrs.ACCESS_CONTROL_MAX_AGE,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                        },
-                    },
-                    {
-                        "name": "origin and method",
-                        "request_headers": {
-                            hdrs.ORIGIN: client1,
-                            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
-                        },
-                        "in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: client1,
-                            hdrs.ACCESS_CONTROL_ALLOW_METHODS: "GET",
-                        },
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                            hdrs.ACCESS_CONTROL_MAX_AGE,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                        },
-                    },
-                    {
-                        "name": "disallowed origin",
-                        "request_headers": {
-                            hdrs.ORIGIN: client2,
-                            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET",
-                        },
-                        "response_status": 403,
-                        "in_response": "origin '{}' is not allowed".format(
-                            client2),
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                            hdrs.ACCESS_CONTROL_MAX_AGE,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                        },
-                    },
-                    {
-                        "name": "disallowed method",
-                        "request_headers": {
-                            hdrs.ORIGIN: client1,
-                            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "POST",
-                        },
-                        "response_status": 403,
-                        "in_response": "request method 'POST' is not allowed",
-                        "not_in_response_headers": {
-                            hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
-                            hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
-                            hdrs.ACCESS_CONTROL_MAX_AGE,
-                            hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
-                            hdrs.ACCESS_CONTROL_ALLOW_METHODS,
-                            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-                        },
-                    },
-                    ],
-            },
-        ]
-
-        yield from self._run_preflight_requests_tests(
-            tests_descriptions, False, False)
-        yield from self._run_preflight_requests_tests(
-            tests_descriptions, True, False)
-        yield from self._run_preflight_requests_tests(
-            tests_descriptions, False, True)
-
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_multiple_routes_with_one_options(self):
-        """Test CORS preflight handling on resource that is available through
-        several routes.
-        """
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers="*",
-            )
-        })
-
-        cors.add(app.router.add_route("GET", "/{name}", handler))
-        cors.add(app.router.add_route("PUT", "/{name}", handler))
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url + "user",
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
-            }
+@asyncio.coroutine
+def test_preflight_request_headers_webview(test_client):
+    """Test CORS preflight request handlers handling."""
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers=("Content-Type", "X-Header"),
         )
-        self.assertEqual(response.status, 200)
+    })
 
-        data = yield from response.text()
-        self.assertEqual(data, "")
+    class TestView(web.View, CorsViewMixin):
+        @asyncio.coroutine
+        def put(self):
+            response = web.Response(text=TEST_BODY)
 
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_multiple_routes_with_one_options_resource(self):
-        """Test CORS preflight handling on resource that is available through
-        several routes.
-        """
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers="*",
-            )
-        })
+            response.headers[SERVER_CUSTOM_HEADER_NAME] = \
+                SERVER_CUSTOM_HEADER_VALUE
 
-        resource = cors.add(app.router.add_resource("/{name}"))
-        cors.add(resource.add_route("GET", handler))
-        cors.add(resource.add_route("PUT", handler))
+            return response
 
-        yield from self.create_server(app)
+    cors.add(app.router.add_route("*", "/", TestView), webview=True)
 
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url + "user",
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
-            }
-        )
-        self.assertEqual(response.status, 200)
+    client = yield from test_client(app)
 
-        data = yield from response.text()
-        self.assertEqual(data, "")
-
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_max_age_resource(self):
-        """Test CORS preflight handling on resource that is available through
-        several routes.
-        """
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers="*",
-                max_age=1200
-            )
-        })
-
-        resource = cors.add(app.router.add_resource("/{name}"))
-        cors.add(resource.add_route("GET", handler))
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url + "user",
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"
-            }
-        )
-        self.assertEqual(response.status, 200)
-        self.assertEqual(response.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper(),
-                         "1200")
-
-        data = yield from response.text()
-        self.assertEqual(data, "")
-
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_max_age_webview(self):
-        """Test CORS preflight handling on resource that is available through
-        several routes.
-        """
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers="*",
-                max_age=1200
-            )
-        })
-
-        class TestView(web.View, CorsViewMixin):
-            @asyncio.coroutine
-            def get(self):
-                response = web.Response(text=TEST_BODY)
-
-                response.headers[SERVER_CUSTOM_HEADER_NAME] = \
-                    SERVER_CUSTOM_HEADER_VALUE
-
-                return response
-
-        cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url + "user",
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"
-            }
-        )
-        self.assertEqual(response.status, 200)
-        self.assertEqual(response.headers[hdrs.ACCESS_CONTROL_MAX_AGE].upper(),
-                         "1200")
-
-        data = yield from response.text()
-        self.assertEqual(data, "")
-
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_multiple_routes_with_one_options_webview(self):
-        """Test CORS preflight handling on resource that is available through
-        several routes.
-        """
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers="*",
-            )
-        })
-
-        class TestView(web.View, CorsViewMixin):
-            @asyncio.coroutine
-            def get(self):
-                response = web.Response(text=TEST_BODY)
-
-                response.headers[SERVER_CUSTOM_HEADER_NAME] = \
-                    SERVER_CUSTOM_HEADER_VALUE
-
-                return response
-
-            put = get
-
-        cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url + "user",
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT"
-            }
-        )
-        self.assertEqual(response.status, 200)
-
-        data = yield from response.text()
-        self.assertEqual(data, "")
-
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_headers_webview(self):
-        """Test CORS preflight request handlers handling."""
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers=("Content-Type", "X-Header"),
-            )
-        })
-
-        class TestView(web.View, CorsViewMixin):
-            @asyncio.coroutine
-            def put(self):
-                response = web.Response(text=TEST_BODY)
-
-                response.headers[SERVER_CUSTOM_HEADER_NAME] = \
-                    SERVER_CUSTOM_HEADER_VALUE
-
-                return response
-
-        cors.add(app.router.add_route("*", "/", TestView), webview=True)
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
-            }
-        )
-        self.assertEqual((yield from response.text()), "")
-        self.assertEqual(response.status, 200)
-        # Access-Control-Allow-Headers must be compared in case-insensitive
-        # way.
-        self.assertEqual(
-            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+        }
+    )
+    assert (yield from resp.text()) == ""
+    assert resp.status == 200
+    # Access-Control-Allow-Headers must be compared in case-insensitive
+    # way.
+    assert (resp.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper() ==
             "content-type".upper())
 
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
-            }
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
+        }
+    )
+    assert resp.status == 200
+    # Access-Control-Allow-Headers must be compared in case-insensitive
+    # way.
+    assert (
+        frozenset(resp.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
+                  .upper().split(",")) ==
+        {"X-Header".upper(), "content-type".upper()})
+    assert (yield from resp.text()) == ""
+
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
+        }
+    )
+    assert resp.status == 403
+    assert hdrs.ACCESS_CONTROL_ALLOW_HEADERS not in resp.headers
+    assert "headers are not allowed: TEST" in (yield from resp.text())
+
+
+@asyncio.coroutine
+def test_preflight_request_headers_resource(test_client):
+    """Test CORS preflight request handlers handling."""
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers=("Content-Type", "X-Header"),
         )
-        self.assertEqual(response.status, 200)
-        # Access-Control-Allow-Headers must be compared in case-insensitive
-        # way.
-        self.assertEqual(
-            frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
-                      .upper().split(",")),
-            {"X-Header".upper(), "content-type".upper()})
-        self.assertEqual((yield from response.text()), "")
+    })
 
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
-            }
+    cors.add(app.router.add_route("PUT", "/", handler))
+
+    client = yield from test_client(app)
+
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+        }
+    )
+    assert (yield from resp.text()) == ""
+    assert resp.status == 200
+    # Access-Control-Allow-Headers must be compared in case-insensitive
+    # way.
+    assert (
+        resp.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper() ==
+        "content-type".upper())
+
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
+        }
+    )
+    assert resp.status == 200
+    # Access-Control-Allow-Headers must be compared in case-insensitive
+    # way.
+    assert (
+        frozenset(resp.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
+                  .upper().split(",")) ==
+        {"X-Header".upper(), "content-type".upper()})
+    assert (yield from resp.text()) == ""
+
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
+        }
+    )
+    assert resp.status == 403
+    assert hdrs.ACCESS_CONTROL_ALLOW_HEADERS not in resp.headers
+    assert "headers are not allowed: TEST" in (yield from resp.text())
+
+
+@asyncio.coroutine
+def test_preflight_request_headers(test_client):
+    """Test CORS preflight request handlers handling."""
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers=("Content-Type", "X-Header"),
         )
-        self.assertEqual(response.status, 403)
-        self.assertNotIn(
-            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-            response.headers)
-        self.assertIn(
-            "headers are not allowed: TEST",
-            (yield from response.text()))
+    })
 
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_headers_resource(self):
-        """Test CORS preflight request handlers handling."""
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers=("Content-Type", "X-Header"),
-            )
-        })
+    resource = cors.add(app.router.add_resource("/"))
+    cors.add(resource.add_route("PUT", handler))
 
-        cors.add(app.router.add_route("PUT", "/", handler))
+    client = yield from test_client(app)
 
-        yield from self.create_server(app)
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+        }
+    )
+    assert (yield from resp.text()) == ""
+    assert resp.status == 200
+    # Access-Control-Allow-Headers must be compared in case-insensitive
+    # way.
+    assert (
+        resp.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper() ==
+        "content-type".upper())
 
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
-            }
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
+        }
+    )
+    assert resp.status == 200
+    # Access-Control-Allow-Headers must be compared in case-insensitive
+    # way.
+    assert (
+        frozenset(resp.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
+                  .upper().split(",")) ==
+        {"X-Header".upper(), "content-type".upper()})
+    assert (yield from resp.text()) == ""
+
+    resp = yield from client.options(
+        '/',
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
+        }
+    )
+    assert resp.status == 403
+    assert hdrs.ACCESS_CONTROL_ALLOW_HEADERS not in resp.headers
+    assert "headers are not allowed: TEST" in (yield from resp.text())
+
+
+@asyncio.coroutine
+def test_static_route(test_client):
+    """Test a static route with CORS."""
+    app = web.Application()
+    cors = _setup(app, defaults={
+        "*": ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_methods="*",
+            allow_headers=("Content-Type", "X-Header"),
         )
-        self.assertEqual((yield from response.text()), "")
-        self.assertEqual(response.status, 200)
-        # Access-Control-Allow-Headers must be compared in case-insensitive
-        # way.
-        self.assertEqual(
-            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
-            "content-type".upper())
+    })
 
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
-            }
-        )
-        self.assertEqual(response.status, 200)
-        # Access-Control-Allow-Headers must be compared in case-insensitive
-        # way.
-        self.assertEqual(
-            frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
-                      .upper().split(",")),
-            {"X-Header".upper(), "content-type".upper()})
-        self.assertEqual((yield from response.text()), "")
+    test_static_path = pathlib.Path(__file__).parent
+    cors.add(app.router.add_static("/static", test_static_path,
+                                   name='static'))
 
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
-            }
-        )
-        self.assertEqual(response.status, 403)
-        self.assertNotIn(
-            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-            response.headers)
-        self.assertIn(
-            "headers are not allowed: TEST",
-            (yield from response.text()))
+    client = yield from test_client(app)
 
-    @asynctest
-    @asyncio.coroutine
-    def test_preflight_request_headers(self):
-        """Test CORS preflight request handlers handling."""
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_headers=("Content-Type", "X-Header"),
-            )
-        })
-
-        resource = cors.add(app.router.add_resource("/"))
-        cors.add(resource.add_route("PUT", handler))
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
-            }
-        )
-        self.assertEqual((yield from response.text()), "")
-        self.assertEqual(response.status, 200)
-        # Access-Control-Allow-Headers must be compared in case-insensitive
-        # way.
-        self.assertEqual(
-            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS].upper(),
-            "content-type".upper())
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "X-Header,content-type",
-            }
-        )
-        self.assertEqual(response.status, 200)
-        # Access-Control-Allow-Headers must be compared in case-insensitive
-        # way.
-        self.assertEqual(
-            frozenset(response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS]
-                      .upper().split(",")),
-            {"X-Header".upper(), "content-type".upper()})
-        self.assertEqual((yield from response.text()), "")
-
-        response = yield from self.session.request(
-            "OPTIONS", self.server_url,
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "PUT",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type,Test",
-            }
-        )
-        self.assertEqual(response.status, 403)
-        self.assertNotIn(
-            hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
-            response.headers)
-        self.assertIn(
-            "headers are not allowed: TEST",
-            (yield from response.text()))
-
-    @asynctest
-    @asyncio.coroutine
-    def test_static_route(self):
-        """Test a static route with CORS."""
-        app = web.Application()
-        cors = setup(app, defaults={
-            "*": ResourceOptions(
-                allow_credentials=True,
-                expose_headers="*",
-                allow_methods="*",
-                allow_headers=("Content-Type", "X-Header"),
-            )
-        })
-
-        test_static_path = pathlib.Path(__file__).parent
-        cors.add(app.router.add_static("/static", test_static_path,
-                                       name='static'))
-
-        yield from self.create_server(app)
-
-        response = yield from self.session.request(
-            "OPTIONS", URL(self.server_url) / "static/test_page.html",
-            headers={
-                hdrs.ORIGIN: "http://example.org",
-                hdrs.ACCESS_CONTROL_REQUEST_METHOD: "OPTIONS",
-                hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
-            }
-        )
-        data = yield from response.text()
-        self.assertEqual(response.status, 200)
-        self.assertEqual(data, '')
+    resp = yield from client.options(
+        "/static/test_page.html",
+        headers={
+            hdrs.ORIGIN: "http://example.org",
+            hdrs.ACCESS_CONTROL_REQUEST_METHOD: "OPTIONS",
+            hdrs.ACCESS_CONTROL_REQUEST_HEADERS: "content-type",
+        }
+    )
+    data = yield from resp.text()
+    assert resp.status == 200
+    assert data == ''
 
 
 # TODO: test requesting resources with not configured CORS.

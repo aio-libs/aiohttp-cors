@@ -2,17 +2,11 @@ version: 0.0.1.dev{build}
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.4"
-      PYTHON_ARCH: "32"
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.4"
-      PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.1"
+      PYTHON_VERSION: "3.5.3"
       PYTHON_ARCH: "32"
     - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.1"
+      PYTHON_VERSION: "3.5.3"
       PYTHON_ARCH: "64"
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6.0"

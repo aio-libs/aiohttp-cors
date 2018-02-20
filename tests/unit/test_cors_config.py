@@ -23,7 +23,7 @@ from aiohttp import web
 from aiohttp_cors import CorsConfig, ResourceOptions, CorsViewMixin
 
 
-def _handler(request):
+async def _handler(request):
     return web.Response(text="Done")
 
 
@@ -35,8 +35,8 @@ class _View(web.View, CorsViewMixin):
 
 
 @pytest.fixture
-def app(loop):
-    return web.Application(loop=loop)
+def app():
+    return web.Application()
 
 
 @pytest.fixture

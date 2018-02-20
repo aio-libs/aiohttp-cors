@@ -57,9 +57,9 @@ class WebViewHandler(web.View, CorsViewMixin):
 
 
 @pytest.fixture(params=['resource', 'view', 'route'])
-def make_app(loop, request):
+def make_app(request):
     def inner(defaults, route_config):
-        app = web.Application(loop=loop)
+        app = web.Application()
         cors = _setup(app, defaults=defaults)
 
         if request.param == 'resource':

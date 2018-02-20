@@ -26,13 +26,13 @@ from aiohttp_cors.urldispatcher_router_adapter import \
 from aiohttp_cors import ResourceOptions
 
 
-def _handler(request):
+async def _handler(request):
     return web.Response(text="Done")
 
 
 @pytest.fixture
-def app(loop):
-    return web.Application(loop=loop)
+def app():
+    return web.Application()
 
 
 @pytest.fixture

@@ -52,8 +52,8 @@ class CustomMethodView(web.View, CorsViewMixin):
 
 
 @pytest.fixture
-def _app(loop):
-    return web.Application(loop=loop)
+def _app():
+    return web.Application()
 
 
 @pytest.fixture

@@ -1,4 +1,3 @@
-import asyncio
 import collections
 
 from .preflight_handler import _PreflightHandler
@@ -40,11 +39,9 @@ class CorsViewMixin(_PreflightHandler):
 
         return collections.ChainMap(custom_config, class_config, cors.defaults)
 
-    @asyncio.coroutine
-    def _get_config(self, request, origin, request_method):
+    async def _get_config(self, request, origin, request_method):
         return self.get_request_config(request, request_method)
 
-    @asyncio.coroutine
-    def options(self):
-        response = yield from self._preflight_handler(self.request)
+    async def options(self):
+        response = await self._preflight_handler(self.request)
         return response

@@ -19,7 +19,6 @@ import os
 import json
 import asyncio
 import socket
-import unittest
 import pathlib
 import logging
 import webbrowser
@@ -67,31 +66,26 @@ class IntegrationServers:
     def origin_server_url(self):
         return self.servers["origin"].url
 
-    @asyncio.coroutine
-    def start_servers(self):
+    async def start_servers(self):
         test_page_path = pathlib.Path(__file__).with_name("test_page.html")
 
-        @asyncio.coroutine
-        def handle_test_page(request: web.Request) -> web.StreamResponse:
+        async def handle_test_page(request: web.Request) -> web.StreamResponse:
             with test_page_path.open("r", encoding="utf-8") as f:
                 return web.Response(
                     text=f.read(),
                     headers={hdrs.CONTENT_TYPE: "text/html"})
 
-        @asyncio.coroutine
-        def handle_no_cors(request: web.Request) -> web.StreamResponse:
+        async def handle_no_cors(request: web.Request) -> web.StreamResponse:
             return web.Response(
                 text="""{"type": "no_cors.json"}""",
                 headers={hdrs.CONTENT_TYPE: "application/json"})
 
-        @asyncio.coroutine
-        def handle_resource(request: web.Request) -> web.StreamResponse:
+        async def handle_resource(request: web.Request) -> web.StreamResponse:
             return web.Response(
                 text="""{"type": "resource"}""",
                 headers={hdrs.CONTENT_TYPE: "application/json"})
 
-        @asyncio.coroutine
-        def handle_servers_addresses(
+        async def handle_servers_addresses(
                 request: web.Request) -> web.StreamResponse:
             servers_addresses = \
                 {name: descr.url for name, descr in self.servers.items()}
@@ -100,8 +94,7 @@ class IntegrationServers:
 
         class ResourceView(web.View, CorsViewMixin):
 
-            @asyncio.coroutine
-            def get(self) -> web.StreamResponse:
+            async def get(self) -> web.StreamResponse:
                 return handle_resource(self.request)
 
         # For most resources:
@@ -201,7 +194,7 @@ class IntegrationServers:
         # Start servers.
         for server_name, server_descr in self.servers.items():
             handler = server_descr.app.make_handler()
-            server = yield from self.loop.create_server(
+            server = await self.loop.create_server(
                 handler,
                 sock=server_sockets[server_name])
             server_descr.handler = handler
@@ -210,13 +203,12 @@ class IntegrationServers:
             self._logger.info("Started server '%s' at '%s'",
                               server_name, server_descr.url)
 
-    @asyncio.coroutine
-    def stop_servers(self):
+    async def stop_servers(self):
         for server_descr in self.servers.values():
             server_descr.server.close()
-            yield from server_descr.handler.shutdown()
-            yield from server_descr.server.wait_closed()
-            yield from server_descr.app.cleanup()
+            await server_descr.handler.shutdown()
+            await server_descr.server.wait_closed()
+            await server_descr.app.cleanup()
 
         self.servers = {}
 
@@ -236,8 +228,7 @@ def _get_chrome_driver():
                         (True, False),
                         (False, True)])
 def server(request, loop):
-    @asyncio.coroutine
-    def inner():
+    async def inner():
         # to grab implicit loop
         return IntegrationServers(*request.param)
     return loop.run_until_complete(inner())
@@ -255,10 +246,9 @@ def driver(request):
     driver.close()
 
 
-@asyncio.coroutine
-def test_in_webdriver(driver, server):
+async def test_in_webdriver(driver, server):
     loop = asyncio.get_event_loop()
-    yield from server.start_servers()
+    await server.start_servers()
 
     def selenium_thread():
         driver.get(server.origin_server_url)
@@ -283,7 +273,7 @@ def test_in_webdriver(driver, server):
         return json.loads(results_area.get_attribute("value"))
 
     try:
-        results = yield from loop.run_in_executor(
+        results = await loop.run_in_executor(
             None, selenium_thread)
 
         assert results["status"] == "success"
@@ -291,7 +281,7 @@ def test_in_webdriver(driver, server):
             assert test_data["status"] == "success"
 
     finally:
-        yield from server.stop_servers()
+        await server.stop_servers()
 
 
 def _run_integration_server():

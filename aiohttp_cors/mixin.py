@@ -1,8 +1,8 @@
 import asyncio
 import collections
 
-from aiohttp import hdrs, web
 from .preflight_handler import _PreflightHandler
+
 
 def custom_cors(config):
     def wrapper(function):

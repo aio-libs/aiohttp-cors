@@ -23,8 +23,7 @@ CUSTOM_CONFIG = {
 
 
 class SimpleView(web.View, CorsViewMixin):
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         return web.Response(text="Done")
 
 
@@ -32,8 +31,7 @@ class SimpleViewWithConfig(web.View, CorsViewMixin):
 
     cors_config = CLASS_CONFIG
 
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         return web.Response(text="Done")
 
 
@@ -41,13 +39,11 @@ class CustomMethodView(web.View, CorsViewMixin):
 
     cors_config = CLASS_CONFIG
 
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         return web.Response(text="Done")
 
     @custom_cors(CUSTOM_CONFIG)
-    @asyncio.coroutine
-    def post(self):
+    async def post(self):
         return web.Response(text="Done")
 
 
@@ -78,8 +74,7 @@ def test_raise_exception_when_cors_not_configure():
         view.get_request_config(request, 'post')
 
 
-@asyncio.coroutine
-def test_raises_forbidden_when_config_not_found(app):
+async def test_raises_forbidden_when_config_not_found(app):
     app[APP_CONFIG_KEY].defaults = {}
     request = mock.Mock()
     request.app = app
@@ -90,7 +85,7 @@ def test_raises_forbidden_when_config_not_found(app):
     view = SimpleView(request)
 
     with pytest.raises(web.HTTPForbidden):
-        yield from view.options()
+        await view.options()
 
 
 def test_method_with_custom_cors(app):
@@ -115,7 +110,7 @@ def test_method_with_class_config(app):
     assert not hasattr(view.get, 'get_cors_config')
     config = view.get_request_config(request, 'get')
 
-    assert config.get('*') ==CLASS_CONFIG['*']
+    assert config.get('*') == CLASS_CONFIG['*']
 
 
 def test_method_with_default_config(app):

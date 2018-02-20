@@ -15,7 +15,6 @@
 """aiohttp_cors.urldispatcher_router_adapter unit tests.
 """
 
-import asyncio
 from unittest import mock
 
 import pytest
@@ -75,7 +74,8 @@ def test_raises_add_preflight_webview(adapter, get_route):
 def test_add_options_route(adapter, options_route):
     """Test configuring OPTIONS route"""
 
-    with pytest.raises(ValueError,
+    with pytest.raises(
+            ValueError,
             match="CORS must be enabled for route's resource first"):
         adapter.add_preflight_handler(options_route, _handler)
 

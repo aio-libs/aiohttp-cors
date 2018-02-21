@@ -95,7 +95,7 @@ class IntegrationServers:
         class ResourceView(web.View, CorsViewMixin):
 
             async def get(self) -> web.StreamResponse:
-                return handle_resource(self.request)
+                return await handle_resource(self.request)
 
         # For most resources:
         # "origin" server has no CORS configuration.

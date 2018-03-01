@@ -65,12 +65,6 @@ def test_add_get_route(adapter, get_route):
     assert len(adapter._preflight_routes) == 1
 
 
-def test_raises_add_preflight_webview(adapter, get_route):
-    with pytest.raises(ValueError):
-        adapter.add_preflight_handler(
-            get_route.resource, _handler, webview=True)
-
-
 def test_add_options_route(adapter, options_route):
     """Test configuring OPTIONS route"""
 

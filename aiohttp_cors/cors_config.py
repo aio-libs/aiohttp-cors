@@ -130,18 +130,12 @@ class _CorsConfigImpl(_PreflightHandler):
         :return: `routing_entity`.
         """
 
-        webview = False
-        if isinstance(routing_entity, web.AbstractRoute):
-            handler = routing_entity.handler
-            if isinstance(handler, type) and issubclass(handler, web.View):
-                webview = True
-
         parsed_config = _parse_config_options(config)
 
         self._router_adapter.add_preflight_handler(
-            routing_entity, self._preflight_handler, webview=webview)
+            routing_entity, self._preflight_handler)
         self._router_adapter.set_config_for_routing_entity(
-            routing_entity, parsed_config, webview=webview)
+            routing_entity, parsed_config)
 
         return routing_entity
 

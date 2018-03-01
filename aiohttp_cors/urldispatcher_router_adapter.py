@@ -88,6 +88,15 @@ class _ResourceConfig:
         self.method_config = {}
 
 
+def _is_web_view(entity):
+    webview = False
+    if isinstance(entity, web.AbstractRoute):
+        handler = entity.handler
+        if isinstance(handler, type) and issubclass(handler, web.View):
+            webview = True
+    return webview
+
+
 class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
     """Adapter for `UrlDispatcher` for Resources-based routing only.
 
@@ -122,14 +131,14 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             self,
             routing_entity: Union[web.Resource, web.StaticResource,
                                   web.ResourceRoute],
-            handler,
-            webview: bool=False):
+            handler):
         """Add OPTIONS handler for all routes defined by `routing_entity`.
 
         Does nothing if CORS handler already handles routing entity.
         Should fail if there are conflicting user-defined OPTIONS handlers.
         """
 
+        webview = _is_web_view(routing_entity)
         if webview:
             raise ValueError("WebView should use Route based dispatcher.")
 
@@ -202,9 +211,10 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             self,
             routing_entity: Union[web.Resource, web.StaticResource,
                                   web.ResourceRoute],
-            config,
-            webview: bool=False):
+            config):
         """Record configuration for resource or it's route."""
+
+        # webview = _is_web_view(routing_entity)
 
         if isinstance(routing_entity, (web.Resource, web.StaticResource)):
             resource = routing_entity
@@ -323,11 +333,11 @@ class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
     def add_preflight_handler(
             self,
             route: web.AbstractRoute,
-            handler,
-            webview: bool=False):
+            handler):
         """Add OPTIONS handler for same paths that `route` handles."""
 
         assert isinstance(route, web.AbstractRoute)
+        webview = _is_web_view(route)
 
         if webview:
             self._preflight_routes.add(route)
@@ -390,11 +400,11 @@ class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
     def set_config_for_routing_entity(
             self,
             route: web.AbstractRoute,
-            config,
-            webview: bool=False):
+            config):
         """Record CORS configuration for route."""
 
         assert isinstance(route, web.AbstractRoute)
+        webview = _is_web_view(route)
 
         if any(options.allow_methods is not None
                for options in config.values()):

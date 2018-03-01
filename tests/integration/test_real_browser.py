@@ -186,7 +186,7 @@ class IntegrationServers:
                 server_descr.cors.add(route)
 
             elif self.use_webview:
-                server_descr.cors.add(route, webview=True)
+                server_descr.cors.add(route)
 
             else:
                 server_descr.cors.add(route)

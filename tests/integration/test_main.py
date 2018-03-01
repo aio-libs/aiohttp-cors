@@ -356,7 +356,8 @@ async def test_simple_expose_headers_allowed_origin(aiohttp_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_expose_headers_not_allowed_origin(aiohttp_client, make_app):
+async def test_simple_expose_headers_not_allowed_origin(aiohttp_client,
+                                                        make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions(
                               expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
@@ -508,7 +509,7 @@ async def test_preflight_default_disallowed_method(aiohttp_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_request_multiple_routes_with_one_options(aiohttp_client):
+async def test_preflight_req_multiple_routes_with_one_options(aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.
     """

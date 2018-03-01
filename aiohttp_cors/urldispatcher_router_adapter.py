@@ -23,6 +23,7 @@ from aiohttp import web
 from aiohttp import hdrs
 
 from .abc import AbstractRouterAdapter
+from .mixin import CorsViewMixin
 
 
 # There several usage patterns of routes which should be handled
@@ -94,6 +95,10 @@ def _is_web_view(entity):
         handler = entity.handler
         if isinstance(handler, type) and issubclass(handler, web.View):
             webview = True
+            if not issubclass(handler, CorsViewMixin):
+                raise ValueError("web view should be derivad from "
+                                 "aiohttp_cors.WebViewMixig for working "
+                                 "with the library")
     return webview
 
 
@@ -214,7 +219,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             config):
         """Record configuration for resource or it's route."""
 
-        # webview = _is_web_view(routing_entity)
+        _is_web_view(routing_entity)
 
         if isinstance(routing_entity, (web.Resource, web.StaticResource)):
             resource = routing_entity

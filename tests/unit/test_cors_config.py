@@ -120,7 +120,15 @@ def test_web_view_resource(app, cors):
 
 def test_web_view_warning(app, cors):
     """Test adding resource with web.View as handler"""
-    assert len(app.router.keys()) == 0
     route = app.router.add_route("*", "/", _View)
     with pytest.warns(DeprecationWarning):
         cors.add(route, webview=True)
+
+
+def test_disable_bare_view(app, cors):
+    class View(web.View):
+        pass
+
+    route = app.router.add_route("*", "/", View)
+    with pytest.raises(ValueError):
+        cors.add(route)

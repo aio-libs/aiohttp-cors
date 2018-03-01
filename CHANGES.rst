@@ -5,7 +5,9 @@
 0.7.0 (2018-03-xx)
 ==================
 
-- Make web view check implicit and type based
+- Make web view check implicit and type based (#159)
+
+- Disable Python 3.4 support (#156)
 
 0.6.0 (2017-12-21)
 ==================

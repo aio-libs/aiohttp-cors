@@ -16,6 +16,7 @@
 """
 
 import collections
+import warnings
 from typing import Mapping, Union, Any
 
 from aiohttp import hdrs, web
@@ -117,8 +118,7 @@ class _CorsConfigImpl(_PreflightHandler):
 
     def add(self,
             routing_entity,
-            config: _ConfigType=None,
-            webview: bool=False):
+            config: _ConfigType=None):
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.
@@ -133,9 +133,9 @@ class _CorsConfigImpl(_PreflightHandler):
         parsed_config = _parse_config_options(config)
 
         self._router_adapter.add_preflight_handler(
-            routing_entity, self._preflight_handler, webview=webview)
+            routing_entity, self._preflight_handler)
         self._router_adapter.set_config_for_routing_entity(
-            routing_entity, parsed_config, webview=webview)
+            routing_entity, parsed_config)
 
         return routing_entity
 
@@ -266,6 +266,13 @@ class CorsConfig:
         :return: `routing_entity`.
         """
 
+        if webview:
+            warnings.warn('webview argument is deprecated, '
+                          'views are handled authomatically without '
+                          'extra settings',
+                          DeprecationWarning,
+                          stacklevel=2)
+
         if self._cors_impl is not None:
             # Custom router adapter.
             return self._cors_impl.add(routing_entity, config)
@@ -288,7 +295,7 @@ class CorsConfig:
                     # Route which resource has no CORS configuration, i.e.
                     # old-style route.
                     return self._old_routes_cors_impl.add(
-                        routing_entity, config, webview=webview)
+                        routing_entity, config)
 
             else:
                 raise ValueError(

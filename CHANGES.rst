@@ -1,37 +1,45 @@
-CHANGES
-=======
+=========
+ CHANGES
+=========
+
+0.7.0 (2018-03-xx)
+==================
+
+- Make web view check implicit and type based (#159)
+
+- Disable Python 3.4 support (#156)
 
 0.6.0 (2017-12-21)
-------------------
+==================
 
 - Support aiohttp views by ``CorsViewMixin`` (#145)
 
 0.5.3 (2017-04-21)
-------------------
+==================
 
 - Fix ``typing`` being installed on Python 3.6.
 
 0.5.2 (2017-03-28)
-------------------
+==================
 
 - Fix tests compatibility with ``aiohttp`` 2.0.
   This release and release v0.5.0 should work on ``aiohttp`` 2.0.
 
 
 0.5.1 (2017-03-23)
-------------------
+==================
 
 - Enforce ``aiohttp`` version to be less than 2.0.
   Newer ``aiohttp`` releases will be supported in the next release.
 
 0.5.0 (2016-11-18)
-------------------
+==================
 
 - Fix compatibility with ``aiohttp`` 1.1
 
 
 0.4.0 (2016-04-04)
-------------------
+==================
 
 - Fixed support with new Resources objects introduced in ``aiohttp`` 0.21.0.
   Minimum supported version of ``aiohttp`` is 0.21.4 now.
@@ -59,7 +67,7 @@ CHANGES
   agnostic.
 
 0.3.0 (2016-02-06)
-------------------
+==================
 
 - Rename ``UrlDistatcherRouterAdapter`` to ``UrlDispatcherRouterAdapter``.
 
@@ -67,7 +75,7 @@ CHANGES
   details.
 
 0.2.0 (2015-11-30)
-------------------
+==================
 
 - Move ABCs from ``aiohttp_cors.router_adapter`` to ``aiohttp_cors.abc``.
 
@@ -76,6 +84,6 @@ CHANGES
 - Fix bug with configuring CORS for named routes.
 
 0.1.0 (2015-11-05)
-------------------
+==================
 
 * Initial release.

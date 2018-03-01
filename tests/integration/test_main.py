@@ -64,8 +64,7 @@ def make_app(request):
         elif request.param == 'view':
             WebViewHandler.cors_config = route_config
             cors.add(
-                app.router.add_route("*", "/resource", WebViewHandler),
-                webview=True)
+                app.router.add_route("*", "/resource", WebViewHandler))
         elif request.param == 'route':
             cors.add(
                 app.router.add_route("GET", "/resource", handler),
@@ -629,7 +628,7 @@ async def test_preflight_request_max_age_webview(test_client):
 
             return resp
 
-    cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
+    cors.add(app.router.add_route("*", "/{name}", TestView))
 
     client = await test_client(app)
 
@@ -672,7 +671,7 @@ async def test_preflight_request_mult_routes_with_one_options_webview(
 
         put = get
 
-    cors.add(app.router.add_route("*", "/{name}", TestView), webview=True)
+    cors.add(app.router.add_route("*", "/{name}", TestView))
 
     client = await test_client(app)
 
@@ -709,7 +708,7 @@ async def test_preflight_request_headers_webview(test_client):
 
             return response
 
-    cors.add(app.router.add_route("*", "/", TestView), webview=True)
+    cors.add(app.router.add_route("*", "/", TestView))
 
     client = await test_client(app)
 

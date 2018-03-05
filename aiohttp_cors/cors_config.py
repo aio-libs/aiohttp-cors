@@ -21,7 +21,6 @@ from typing import Mapping, Union, Any
 
 from aiohttp import hdrs, web
 
-from .urldispatcher_router_adapter import OldRoutesUrlDispatcherRouterAdapter
 from .urldispatcher_router_adapter import ResourcesUrlDispatcherRouterAdapter
 from .abc import AbstractRouterAdapter
 from .resource_options import ResourceOptions
@@ -233,23 +232,11 @@ class CorsConfig:
 
         self._old_routes_cors_impl = None
 
-        if router_adapter is not None:
-            self._cors_impl = _CorsConfigImpl(app, router_adapter)
-
-        elif isinstance(app.router, web.UrlDispatcher):
-            self._resources_router_adapter = \
+        if router_adapter is None:
+            router_adapter = \
                 ResourcesUrlDispatcherRouterAdapter(app.router, self.defaults)
-            self._resources_cors_impl = _CorsConfigImpl(
-                app,
-                self._resources_router_adapter)
-            self._old_routes_cors_impl = _CorsConfigImpl(
-                app,
-                OldRoutesUrlDispatcherRouterAdapter(app.router, self.defaults))
-        else:
-            raise RuntimeError(
-                "Router adapter is not specified. "
-                "Routers other than aiohttp.web.UrlDispatcher requires"
-                "custom router adapter.")
+
+        self._cors_impl = _CorsConfigImpl(app, router_adapter)
 
     def add(self,
             routing_entity,
@@ -273,30 +260,4 @@ class CorsConfig:
                           DeprecationWarning,
                           stacklevel=2)
 
-        if self._cors_impl is not None:
-            # Custom router adapter.
-            return self._cors_impl.add(routing_entity, config)
-
-        else:
-            # UrlDispatcher.
-
-            if isinstance(routing_entity, (web.Resource, web.StaticResource)):
-                # New Resource - use new router adapter.
-                return self._resources_cors_impl.add(routing_entity, config)
-
-            elif isinstance(routing_entity, web.AbstractRoute):
-                if self._resources_router_adapter.is_cors_for_resource(
-                        routing_entity.resource):
-                    # Route which resource has CORS configuration in
-                    # new-style router adapter.
-                    return self._resources_cors_impl.add(
-                        routing_entity, config)
-                else:
-                    # Route which resource has no CORS configuration, i.e.
-                    # old-style route.
-                    return self._old_routes_cors_impl.add(
-                        routing_entity, config)
-
-            else:
-                raise ValueError(
-                    "Unknown resource/route type: {!r}".format(routing_entity))
+        return self._cors_impl.add(routing_entity, config)

@@ -77,13 +77,13 @@ def make_app(request):
     return inner
 
 
-async def test_message_roundtrip(test_client):
+async def test_message_roundtrip(aiohttp_client):
     """Test that aiohttp server is correctly setup in the base class."""
 
     app = web.Application()
     app.router.add_route("GET", "/", handler)
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get('/')
     assert resp.status == 200
@@ -92,22 +92,22 @@ async def test_message_roundtrip(test_client):
     assert data == TEST_BODY
 
 
-async def test_dummy_setup(test_server):
+async def test_dummy_setup(aiohttp_server):
     """Test a dummy configuration."""
     app = web.Application()
     _setup(app)
 
-    await test_server(app)
+    await aiohttp_server(app)
 
 
-async def test_dummy_setup_roundtrip(test_client):
+async def test_dummy_setup_roundtrip(aiohttp_client):
     """Test a dummy configuration with a message round-trip."""
     app = web.Application()
     _setup(app)
 
     app.router.add_route("GET", "/", handler)
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get('/')
     assert resp.status == 200
@@ -116,14 +116,14 @@ async def test_dummy_setup_roundtrip(test_client):
     assert data == TEST_BODY
 
 
-async def test_dummy_setup_roundtrip_resource(test_client):
+async def test_dummy_setup_roundtrip_resource(aiohttp_client):
     """Test a dummy configuration with a message round-trip."""
     app = web.Application()
     _setup(app)
 
     app.router.add_resource("/").add_route("GET", handler)
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get('/')
     assert resp.status == 200
@@ -132,11 +132,11 @@ async def test_dummy_setup_roundtrip_resource(test_client):
     assert data == TEST_BODY
 
 
-async def test_simple_no_origin(test_client, make_app):
+async def test_simple_no_origin(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource")
     assert resp.status == 200
@@ -151,11 +151,11 @@ async def test_simple_no_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_allowed_origin(test_client, make_app):
+async def test_simple_allowed_origin(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -176,11 +176,11 @@ async def test_simple_allowed_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_not_allowed_origin(test_client, make_app):
+async def test_simple_not_allowed_origin(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -197,11 +197,11 @@ async def test_simple_not_allowed_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_explicit_port(test_client, make_app):
+async def test_simple_explicit_port(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -218,11 +218,11 @@ async def test_simple_explicit_port(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_different_scheme(test_client, make_app):
+async def test_simple_different_scheme(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -249,10 +249,10 @@ def app_for_credentials(make_app, request):
     return make_app(*request.param)
 
 
-async def test_cred_no_origin(test_client, app_for_credentials):
+async def test_cred_no_origin(aiohttp_client, app_for_credentials):
     app = app_for_credentials
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource")
     assert resp.status == 200
@@ -267,10 +267,10 @@ async def test_cred_no_origin(test_client, app_for_credentials):
         assert header_name not in resp.headers
 
 
-async def test_cred_allowed_origin(test_client, app_for_credentials):
+async def test_cred_allowed_origin(aiohttp_client, app_for_credentials):
     app = app_for_credentials
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -290,10 +290,10 @@ async def test_cred_allowed_origin(test_client, app_for_credentials):
         assert header_name not in resp.headers
 
 
-async def test_cred_disallowed_origin(test_client, app_for_credentials):
+async def test_cred_disallowed_origin(aiohttp_client, app_for_credentials):
     app = app_for_credentials
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -310,12 +310,12 @@ async def test_cred_disallowed_origin(test_client, app_for_credentials):
         assert header_name not in resp.headers
 
 
-async def test_simple_expose_headers_no_origin(test_client, make_app):
+async def test_simple_expose_headers_no_origin(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions(
                               expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource")
     assert resp.status == 200
@@ -330,12 +330,12 @@ async def test_simple_expose_headers_no_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_expose_headers_allowed_origin(test_client, make_app):
+async def test_simple_expose_headers_allowed_origin(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions(
                               expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -356,12 +356,13 @@ async def test_simple_expose_headers_allowed_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_simple_expose_headers_not_allowed_origin(test_client, make_app):
+async def test_simple_expose_headers_not_allowed_origin(aiohttp_client,
+                                                        make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions(
                               expose_headers=(SERVER_CUSTOM_HEADER_NAME,))})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.get("/resource",
                             headers={hdrs.ORIGIN:
@@ -378,11 +379,11 @@ async def test_simple_expose_headers_not_allowed_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_default_no_origin(test_client, make_app):
+async def test_preflight_default_no_origin(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options("/resource")
     assert resp.status == 403
@@ -400,12 +401,12 @@ async def test_preflight_default_no_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_default_no_method(test_client, make_app):
+async def test_preflight_default_no_method(aiohttp_client, make_app):
 
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options("/resource", headers={
                         hdrs.ORIGIN: "http://client1.example.org",
@@ -426,12 +427,12 @@ async def test_preflight_default_no_method(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_default_origin_and_method(test_client, make_app):
+async def test_preflight_default_origin_and_method(aiohttp_client, make_app):
 
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options("/resource", headers={
                         hdrs.ORIGIN: "http://client1.example.org",
@@ -455,12 +456,12 @@ async def test_preflight_default_origin_and_method(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_default_disallowed_origin(test_client, make_app):
+async def test_preflight_default_disallowed_origin(aiohttp_client, make_app):
 
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options("/resource", headers={
         hdrs.ORIGIN: "http://client2.example.org",
@@ -481,12 +482,12 @@ async def test_preflight_default_disallowed_origin(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_default_disallowed_method(test_client, make_app):
+async def test_preflight_default_disallowed_method(aiohttp_client, make_app):
 
     app = make_app(None, {"http://client1.example.org":
                           ResourceOptions()})
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options("/resource", headers={
                         hdrs.ORIGIN: "http://client1.example.org",
@@ -508,7 +509,7 @@ async def test_preflight_default_disallowed_method(test_client, make_app):
         assert header_name not in resp.headers
 
 
-async def test_preflight_request_multiple_routes_with_one_options(test_client):
+async def test_preflight_req_multiple_routes_with_one_options(aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.
     """
@@ -524,7 +525,7 @@ async def test_preflight_request_multiple_routes_with_one_options(test_client):
     cors.add(app.router.add_route("GET", "/{name}", handler))
     cors.add(app.router.add_route("PUT", "/{name}", handler))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         "/user",
@@ -540,7 +541,7 @@ async def test_preflight_request_multiple_routes_with_one_options(test_client):
 
 
 async def test_preflight_request_mult_routes_with_one_options_resource(
-        test_client):
+        aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.
     """
@@ -557,7 +558,7 @@ async def test_preflight_request_mult_routes_with_one_options_resource(
     cors.add(resource.add_route("GET", handler))
     cors.add(resource.add_route("PUT", handler))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         "/user",
@@ -572,7 +573,7 @@ async def test_preflight_request_mult_routes_with_one_options_resource(
     assert data == ""
 
 
-async def test_preflight_request_max_age_resource(test_client):
+async def test_preflight_request_max_age_resource(aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.
     """
@@ -589,7 +590,7 @@ async def test_preflight_request_max_age_resource(test_client):
     resource = cors.add(app.router.add_resource("/{name}"))
     cors.add(resource.add_route("GET", handler))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         "/user",
@@ -605,7 +606,7 @@ async def test_preflight_request_max_age_resource(test_client):
     assert data == ""
 
 
-async def test_preflight_request_max_age_webview(test_client):
+async def test_preflight_request_max_age_webview(aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.
     """
@@ -630,7 +631,7 @@ async def test_preflight_request_max_age_webview(test_client):
 
     cors.add(app.router.add_route("*", "/{name}", TestView))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         "/user",
@@ -647,7 +648,7 @@ async def test_preflight_request_max_age_webview(test_client):
 
 
 async def test_preflight_request_mult_routes_with_one_options_webview(
-        test_client):
+        aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.
     """
@@ -673,7 +674,7 @@ async def test_preflight_request_mult_routes_with_one_options_webview(
 
     cors.add(app.router.add_route("*", "/{name}", TestView))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         "/user",
@@ -688,7 +689,7 @@ async def test_preflight_request_mult_routes_with_one_options_webview(
     assert data == ""
 
 
-async def test_preflight_request_headers_webview(test_client):
+async def test_preflight_request_headers_webview(aiohttp_client):
     """Test CORS preflight request handlers handling."""
     app = web.Application()
     cors = _setup(app, defaults={
@@ -710,7 +711,7 @@ async def test_preflight_request_headers_webview(test_client):
 
     cors.add(app.router.add_route("*", "/", TestView))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         '/',
@@ -757,7 +758,7 @@ async def test_preflight_request_headers_webview(test_client):
     assert "headers are not allowed: TEST" in (await resp.text())
 
 
-async def test_preflight_request_headers_resource(test_client):
+async def test_preflight_request_headers_resource(aiohttp_client):
     """Test CORS preflight request handlers handling."""
     app = web.Application()
     cors = _setup(app, defaults={
@@ -770,7 +771,7 @@ async def test_preflight_request_headers_resource(test_client):
 
     cors.add(app.router.add_route("PUT", "/", handler))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         '/',
@@ -818,7 +819,7 @@ async def test_preflight_request_headers_resource(test_client):
     assert "headers are not allowed: TEST" in (await resp.text())
 
 
-async def test_preflight_request_headers(test_client):
+async def test_preflight_request_headers(aiohttp_client):
     """Test CORS preflight request handlers handling."""
     app = web.Application()
     cors = _setup(app, defaults={
@@ -832,7 +833,7 @@ async def test_preflight_request_headers(test_client):
     resource = cors.add(app.router.add_resource("/"))
     cors.add(resource.add_route("PUT", handler))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         '/',
@@ -880,7 +881,7 @@ async def test_preflight_request_headers(test_client):
     assert "headers are not allowed: TEST" in (await resp.text())
 
 
-async def test_static_route(test_client):
+async def test_static_route(aiohttp_client):
     """Test a static route with CORS."""
     app = web.Application()
     cors = _setup(app, defaults={
@@ -896,7 +897,7 @@ async def test_static_route(test_client):
     cors.add(app.router.add_static("/static", test_static_path,
                                    name='static'))
 
-    client = await test_client(app)
+    client = await aiohttp_client(app)
 
     resp = await client.options(
         "/static/test_page.html",

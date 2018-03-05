@@ -15,7 +15,6 @@
 """AbstractRouterAdapter for aiohttp.web.UrlDispatcher.
 """
 import collections
-import re
 
 from typing import Union
 
@@ -89,16 +88,19 @@ class _ResourceConfig:
         self.method_config = {}
 
 
-def _is_web_view(entity):
+def _is_web_view(entity, strict=True):
     webview = False
     if isinstance(entity, web.AbstractRoute):
         handler = entity.handler
         if isinstance(handler, type) and issubclass(handler, web.View):
             webview = True
             if not issubclass(handler, CorsViewMixin):
-                raise ValueError("web view should be derivad from "
-                                 "aiohttp_cors.WebViewMixig for working "
-                                 "with the library")
+                if strict:
+                    raise ValueError("web view should be derived from "
+                                     "aiohttp_cors.WebViewMixig for working "
+                                     "with the library")
+                else:
+                    return False
     return webview
 
 
@@ -143,10 +145,6 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         Should fail if there are conflicting user-defined OPTIONS handlers.
         """
 
-        webview = _is_web_view(routing_entity)
-        if webview:
-            raise ValueError("WebView should use Route based dispatcher.")
-
         if isinstance(routing_entity, web.Resource):
             resource = routing_entity
 
@@ -155,6 +153,22 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             if resource in self._resources_with_preflight_handlers:
                 # Preflight handler already added for this resource.
                 return
+            for route_obj in resource:
+                if route_obj.method == hdrs.METH_OPTIONS:
+                    if route_obj.handler is handler:
+                        return  # already added
+                    else:
+                        raise ValueError(
+                            "{!r} already has OPTIONS handler {!r}"
+                            .format(resource, route_obj.handler))
+                elif route_obj.method == hdrs.METH_ANY:
+                    if _is_web_view(route_obj):
+                        self._preflight_routes.add(route_obj)
+                        self._resources_with_preflight_handlers.add(resource)
+                        return
+                    else:
+                        raise ValueError("{!r} already has a '*' handler "
+                                         "for all methods".format(resource))
 
             preflight_route = resource.add_route(hdrs.METH_OPTIONS, handler)
             self._preflight_routes.add(preflight_route)
@@ -177,13 +191,8 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         elif isinstance(routing_entity, web.ResourceRoute):
             route = routing_entity
 
-            # Preflight handler for Route's Resource already must be
-            # configured.
             if not self.is_cors_for_resource(route.resource):
-                raise ValueError(
-                    "Can't setup CORS for {!r} request, "
-                    "CORS must be enabled for route's resource first.".format(
-                        route))
+                self.add_preflight_handler(route.resource, handler)
 
         else:
             raise ValueError(
@@ -204,8 +213,10 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
 
     def is_preflight_request(self, request: web.Request) -> bool:
         """Is `request` is a CORS preflight request."""
-
-        return self._request_route(request) in self._preflight_routes
+        route = self._request_route(request)
+        if _is_web_view(route, strict=False):
+            return request.method == 'OPTIONS'
+        return route in self._preflight_routes
 
     def is_cors_enabled_on_request(self, request: web.Request) -> bool:
         """Is `request` is a request for CORS-enabled resource."""
@@ -218,8 +229,6 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                                   web.ResourceRoute],
             config):
         """Record configuration for resource or it's route."""
-
-        _is_web_view(routing_entity)
 
         if isinstance(routing_entity, (web.Resource, web.StaticResource)):
             resource = routing_entity
@@ -237,6 +246,9 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
             route = routing_entity
 
             # Add resource's route configuration or fail if it's already added.
+            if route.resource not in self._resource_config:
+                self.set_config_for_routing_entity(route.resource, config)
+
             if route.resource not in self._resource_config:
                 raise ValueError(
                     "Can't setup CORS for {!r} request, "
@@ -297,168 +309,16 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         resource_config = self._resource_config[resource]
         # Take Route config (if any) with defaults from Resource CORS
         # configuration and global defaults.
+        route = request.match_info.route
+        if _is_web_view(route, strict=False):
+            method_config = request.match_info.handler.get_request_config(
+                request, request.method)
+        else:
+            method_config = resource_config.method_config.get(request.method,
+                                                              {})
         defaulted_config = collections.ChainMap(
-            resource_config.method_config.get(request.method, {}),
+            method_config,
             resource_config.default_config,
             self._default_config)
-
-        return defaulted_config
-
-
-class OldRoutesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
-    """Adapter for `UrlDispatcher` for old-style routing only.
-
-    In all use cases when Resource is not explicitly used,
-    Resource will automatically allocated for old route.
-    In this case all routes will have it's own resource, and to find
-    related routes (routes that shares same path) we need to iterate over
-    all routes with enabled CORS and check is they handle specific path.
-
-    This whole class should go away when user will migrate to proper
-    Resource/Route usage scheme.
-    """
-
-    def __init__(self,
-                 router: web.UrlDispatcher,
-                 defaults):
-        """
-        :param defaults:
-            Default CORS configuration.
-        """
-        self._router = router
-
-        # Default configuration for all routes.
-        self._default_config = defaults
-
-        # Mapping from route to config.
-        self._route_config = collections.OrderedDict()
-
-        self._preflight_routes = set()
-
-    def add_preflight_handler(
-            self,
-            route: web.AbstractRoute,
-            handler):
-        """Add OPTIONS handler for same paths that `route` handles."""
-
-        assert isinstance(route, web.AbstractRoute)
-        webview = _is_web_view(route)
-
-        if webview:
-            self._preflight_routes.add(route)
-            return
-
-        if isinstance(route, web.ResourceRoute):
-            # New-style route (which Resource is not used explicitly,
-            # otherwise it would be handled by other adapter).
-            preflight_route = route.resource.add_route(
-                hdrs.METH_OPTIONS, handler)
-
-        elif isinstance(route, web.Route):
-            # Old-style route.
-
-            if isinstance(route, web.StaticRoute):
-                # TODO: Use custom matches that uses `str.startswith()`
-                # if regexp performance is not enough.
-                pattern = re.compile("^" + re.escape(route._prefix))
-                preflight_route = web.DynamicRoute(
-                    hdrs.METH_OPTIONS, handler, None, pattern, "")
-                self._router.register_route(preflight_route)
-
-            elif isinstance(route, web.PlainRoute):
-                # May occur only if user manually creates PlainRoute.
-                preflight_route = self._router.add_route(
-                    hdrs.METH_OPTIONS, route._path, handler)
-
-            elif isinstance(route, web.DynamicRoute):
-                # May occur only if user manually creates DynamicRoute.
-                preflight_route = web.DynamicRoute(
-                    hdrs.METH_OPTIONS, handler, None,
-                    route._pattern, route._formatter)
-                self._router.register_route(preflight_route)
-
-            else:
-                raise RuntimeError(
-                    "Unhandled deprecated route type {!r}".format(route))
-
-        else:
-            raise RuntimeError("Unhandled route type {!r}".format(route))
-
-        self._preflight_routes.add(preflight_route)
-
-    def _request_route(self, request: web.Request) -> web.ResourceRoute:
-        match_info = request.match_info
-        assert isinstance(match_info, web.UrlMappingMatchInfo)
-        return match_info.route
-
-    def is_preflight_request(self, request: web.Request) -> bool:
-        """Is `request` is a CORS preflight request."""
-
-        return (self._request_route(request) in self._preflight_routes and
-                request.method == hdrs.METH_OPTIONS)
-
-    def is_cors_enabled_on_request(self, request: web.Request) -> bool:
-        """Is `request` is a request for CORS-enabled resource."""
-
-        return self._request_route(request) in self._route_config
-
-    def set_config_for_routing_entity(
-            self,
-            route: web.AbstractRoute,
-            config):
-        """Record CORS configuration for route."""
-
-        assert isinstance(route, web.AbstractRoute)
-        webview = _is_web_view(route)
-
-        if any(options.allow_methods is not None
-               for options in config.values()):
-            raise ValueError(
-                "'allow_methods' parameter is not supported on old-style "
-                "routes. You specified {!r} for {!r}. "
-                "Use Resources to configure CORS.".format(
-                    config, route))
-
-        if route in self._route_config:
-            raise ValueError(
-                "CORS is already configured for {!r} route.".format(
-                    route))
-
-        if webview:
-            config = {'webview': True}
-
-        self._route_config[route] = config
-
-    async def get_preflight_request_config(
-            self,
-            preflight_request: web.Request,
-            origin: str,
-            requested_method: str):
-        assert self.is_preflight_request(preflight_request)
-
-        request = preflight_request.clone(method=requested_method)
-        for route, config in self._route_config.items():
-            match_info, allowed_methods = await route.resource.resolve(
-                request)
-            if match_info is not None:
-                return collections.ChainMap(config, self._default_config)
-        else:
-            raise KeyError
-
-    def get_non_preflight_request_config(self, request: web.Request):
-        """Get stored CORS configuration for routing entity that handles
-        specified request."""
-
-        assert self.is_cors_enabled_on_request(request)
-
-        route = self._request_route(request)
-        route_config = self._route_config[route]
-
-        if route_config.get('webview', False):
-            handler = self._request_route(request).handler
-            route_config = handler.get_request_config(request, request.method)
-
-        defaulted_config = collections.ChainMap(
-            route_config, self._default_config)
 
         return defaulted_config

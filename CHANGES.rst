@@ -2,12 +2,14 @@
  CHANGES
 =========
 
-0.7.0 (2018-03-xx)
+0.7.0 (2018-03-05)
 ==================
 
 - Make web view check implicit and type based (#159)
 
 - Disable Python 3.4 support (#156)
+
+- Support aiohttp 3.0+ (#155)
 
 0.6.0 (2017-12-21)
 ==================

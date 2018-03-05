@@ -68,10 +68,7 @@ def test_add_get_route(adapter, get_route):
 def test_add_options_route(adapter, options_route):
     """Test configuring OPTIONS route"""
 
-    with pytest.raises(
-            ValueError,
-            match="CORS must be enabled for route's resource first"):
-        adapter.add_preflight_handler(options_route, _handler)
+    adapter.add_preflight_handler(options_route, _handler)
 
     assert not adapter._resources_with_preflight_handlers
     assert not adapter._preflight_routes

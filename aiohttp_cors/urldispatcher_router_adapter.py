@@ -209,7 +209,12 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         return match_info.route
 
     def _request_resource(self, request: web.Request) -> web.Resource:
-        return self._request_route(request).resource
+        route =  self._request_route(request)
+        if _is_web_view(route, strict=False) and not hasattr(route.handler, request.method.lower()):
+            resource = None
+        else:
+            resource = route.resource
+        return resource
 
     def is_preflight_request(self, request: web.Request) -> bool:
         """Is `request` is a CORS preflight request."""

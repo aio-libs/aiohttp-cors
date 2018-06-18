@@ -209,7 +209,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         return match_info.route
 
     def _request_resource(self, request: web.Request) -> web.Resource:
-        route =  self._request_route(request)
+        route = self._request_route(request)
         if _is_web_view(route, strict=False) and not hasattr(route.handler, request.method.lower()):
             resource = None
         else:

@@ -1,14 +1,14 @@
-aiohttp==3.0.7
-tox==2.9.1
-pytest==3.4.2
+aiohttp==3.3.2
+tox==3.1.2
+pytest==3.6.4
 pytest-aiohttp==0.3.0
 pytest-cov==2.5.1
-pytest-runner==4.0
-pytest-flakes==2.0.0
-pytest-pylint==0.9.0
+pytest-runner==4.2
+pytest-flakes==3.0.2
+pytest-pylint==0.12.0
 pytest-sugar==0.9.1
 flake8==3.5.0
-selenium==3.11.0
+selenium==3.13.0
 docutils==0.14
 pygments==2.2.0
 -e .

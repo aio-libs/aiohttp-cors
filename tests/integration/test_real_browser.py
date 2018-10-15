@@ -193,22 +193,20 @@ class IntegrationServers:
 
         # Start servers.
         for server_name, server_descr in self.servers.items():
-            handler = server_descr.app.make_handler()
-            server = await self.loop.create_server(
-                handler,
-                sock=server_sockets[server_name])
-            server_descr.handler = handler
-            server_descr.server = server
+            runner = web.AppRunner(server_descr.app)
+            await runner.setup()
+            site = web.SockSite(runner, server_sockets[server_name])
+            await site.start()
+            server_descr.runner = runner
 
             self._logger.info("Started server '%s' at '%s'",
                               server_name, server_descr.url)
 
     async def stop_servers(self):
         for server_descr in self.servers.values():
-            server_descr.server.close()
-            await server_descr.handler.shutdown()
-            await server_descr.server.wait_closed()
-            await server_descr.app.cleanup()
+            runner = server_descr.runner
+            await runner.shutdown()
+            await runner.cleanup()
 
         self.servers = {}
 

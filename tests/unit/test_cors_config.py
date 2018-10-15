@@ -58,11 +58,10 @@ def options_route(app):
         "OPTIONS", "/options_path", _handler)
 
 
-def test_add_options_route(cors, options_route):
+def test_add_options_route(app, cors, options_route):
     """Test configuring OPTIONS route"""
-
     with pytest.raises(ValueError,
-                       match="/options_path already has OPTIONS handler"):
+                       match="already has OPTIONS handler"):
         cors.add(options_route.resource)
 
 

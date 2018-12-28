@@ -103,7 +103,7 @@ def test_static_resource(app, cors):
         "/file", "/", name="dynamic_named_route")
     assert len(app.router.keys()) == 1
     for resource in list(app.router.resources()):
-        if issubclass(resource, web.StaticResource):
+        if isinstance(resource, web.StaticResource):
             cors.add(resource)
     assert len(app.router.keys()) == 1
 

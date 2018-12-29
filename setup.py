@@ -37,4 +37,5 @@ setup(
     author_email=about["__email__"],
     description=about["__summary__"],
     url=about["__uri__"],
+    long_description="\n\n".join(( (currentDir / sn).read_text() for sn in ("README.rst", "CHANGES.rst") )),
 )

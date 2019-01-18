@@ -68,6 +68,7 @@ def app(_app, cors):
 def test_raise_exception_when_cors_not_configure():
     request = mock.Mock()
     request.app = {}
+    request.config_dict = {}
     view = CustomMethodView(request)
 
     with pytest.raises(ValueError):
@@ -78,6 +79,7 @@ async def test_raises_forbidden_when_config_not_found(app):
     app[APP_CONFIG_KEY].defaults = {}
     request = mock.Mock()
     request.app = app
+    request.config_dict = app
     request.headers = {
         'Origin': '*',
         'Access-Control-Request-Method': 'GET'
@@ -92,6 +94,7 @@ def test_method_with_custom_cors(app):
     """Test adding resource with web.View as handler"""
     request = mock.Mock()
     request.app = app
+    request.config_dict = app
     view = CustomMethodView(request)
 
     assert hasattr(view.post, 'post_cors_config')
@@ -105,6 +108,7 @@ def test_method_with_class_config(app):
     """Test adding resource with web.View as handler"""
     request = mock.Mock()
     request.app = app
+    request.config_dict = app
     view = SimpleViewWithConfig(request)
 
     assert not hasattr(view.get, 'get_cors_config')
@@ -117,6 +121,7 @@ def test_method_with_default_config(app):
     """Test adding resource with web.View as handler"""
     request = mock.Mock()
     request.app = app
+    request.config_dict = app
     view = SimpleView(request)
 
     assert not hasattr(view.get, 'get_cors_config')

@@ -18,7 +18,7 @@ class CorsViewMixin(_PreflightHandler):
     def get_request_config(cls, request, request_method):
         try:
             from . import APP_CONFIG_KEY
-            cors = request.app[APP_CONFIG_KEY]
+            cors = request.config_dict[APP_CONFIG_KEY]
         except KeyError:
             raise ValueError("aiohttp-cors is not configured.")
 

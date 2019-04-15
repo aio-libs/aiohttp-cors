@@ -2,7 +2,7 @@ aiohttp==3.5.4
 tox==3.8.6
 pytest==4.4.0
 pytest-aiohttp==0.3.0
-pytest-cov==2.6.0
+pytest-cov==2.6.1
 pytest-runner==4.2
 pytest-flakes==4.0.0
 pytest-pylint==0.13.0

@@ -97,7 +97,7 @@ def _is_web_view(entity, strict=True):
             if not issubclass(handler, CorsViewMixin):
                 if strict:
                     raise ValueError("web view should be derived from "
-                                     "aiohttp_cors.WebViewMixig for working "
+                                     "aiohttp_cors.CorsViewMixin for working "
                                      "with the library")
                 else:
                     return False

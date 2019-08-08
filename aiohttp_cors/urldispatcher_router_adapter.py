@@ -145,6 +145,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         Should fail if there are conflicting user-defined OPTIONS handlers.
         """
 
+        resource: Union[web.Resource, web.StaticResource, web.ResourceRoute]
         if isinstance(routing_entity, web.Resource):
             resource = routing_entity
 

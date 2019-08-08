@@ -49,6 +49,7 @@ setup(
         read_file("CHANGES.rst"),
     )),
     packages=["aiohttp_cors"],
+    include_package_data=True,
     setup_requires=[
         # Environment markers were implemented and stabilized in setuptools
         # v20.8.1 (see <http://stackoverflow.com/a/32643122/391865>).

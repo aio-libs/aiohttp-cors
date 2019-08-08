@@ -3,3 +3,4 @@ include CHANGES.rst
 include README.rst
 recursive-include tests *.py
 include tests/integration/test_page.html
+include aiohttp_cors/py.typed

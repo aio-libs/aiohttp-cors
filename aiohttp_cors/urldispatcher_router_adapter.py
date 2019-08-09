@@ -16,7 +16,7 @@
 """
 import collections
 
-from typing import Union
+from typing import Dict, Set, Union
 
 from aiohttp import web
 from aiohttp import hdrs
@@ -129,10 +129,10 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         self._default_config = defaults
 
         # Mapping from Resource to _ResourceConfig.
-        self._resource_config = {}
+        self._resource_config = {}  # type: Dict[web.AbstractResource, _ResourceConfig]
 
-        self._resources_with_preflight_handlers = set()
-        self._preflight_routes = set()
+        self._resources_with_preflight_handlers = set()  # type: Set[web.AbstractResource]
+        self._preflight_routes = set()  # type: Set[web.AbstractRoute]
 
     def add_preflight_handler(
             self,
@@ -204,7 +204,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         """Is CORS is configured for the resource"""
         return resource in self._resources_with_preflight_handlers
 
-    def _request_route(self, request: web.Request) -> web.ResourceRoute:
+    def _request_route(self, request: web.Request) -> web.AbstractRoute:
         match_info = request.match_info
         assert isinstance(match_info, web.UrlMappingMatchInfo)
         return match_info.route

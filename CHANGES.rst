@@ -2,6 +2,12 @@
  CHANGES
 =========
 
+0.8.0 (XXXX-XX-XX)
+==================
+
+- Resolve ``KeyError`` exception when requesting with an unsupported
+  method (#298)
+
 0.7.0 (2018-03-05)
 ==================
 

@@ -25,7 +25,7 @@ class CorsViewMixin(_PreflightHandler):
         method = getattr(cls, request_method.lower(), None)
 
         if not method:
-            raise KeyError()
+            raise KeyError("method not supported")
 
         config_property_key = "{}_cors_config".format(request_method.lower())
 

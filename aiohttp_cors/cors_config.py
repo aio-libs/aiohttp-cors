@@ -154,7 +154,15 @@ class _CorsConfigImpl(_PreflightHandler):
 
         # Processing response of non-preflight CORS-enabled request.
 
-        config = self._router_adapter.get_non_preflight_request_config(request)
+        try:
+            config = self._router_adapter.get_non_preflight_request_config(request)
+        except KeyError as e:
+            if response.status == 405 and e.args[0] == "method not supported":
+                # Permit the response if the method is not supported - e.g: when
+                # using a class derived from web.View and CorsViewMixin
+                return
+
+            raise
 
         # Handle according to part 6.1 of the CORS specification.
 

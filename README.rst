@@ -340,6 +340,7 @@ in the router:
                 allow_credentials=True,
                 expose_headers="*",
                 allow_headers="*",
+                allow_methods="*",
             )
     })
 

@@ -5,7 +5,7 @@ pytest-aiohttp==0.3.0
 pytest-cov==2.7.1
 pytest-runner==5.1
 pytest-flakes==4.0.0
-pytest-pylint==0.14.1
+pytest-pylint==0.18.0
 pytest-sugar==0.9.4
 flake8==3.7.8
 selenium==3.141.0

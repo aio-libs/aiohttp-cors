@@ -1,5 +1,5 @@
 aiohttp==3.7.3
-tox==3.20.1
+tox==3.21.0
 pytest==6.1.2
 pytest-aiohttp==0.3.0
 pytest-cov==2.10.1

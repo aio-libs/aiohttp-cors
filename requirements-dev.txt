@@ -7,7 +7,7 @@ pytest-runner==5.2
 pytest-flakes==4.0.4
 pytest-pylint==0.18.0
 pytest-sugar==0.9.4
-flake8==3.8.4
+flake8==4.0.1
 selenium==4.0.0
 docutils==0.16
 pygments==2.10.0

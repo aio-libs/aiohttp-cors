@@ -1,0 +1,26 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: docutils
+    versions:
+    - "0.17"
+  - dependency-name: flake8
+    versions:
+    - 3.9.0
+  - dependency-name: tox
+    versions:
+    - 3.21.3
+    - 3.21.4
+    - 3.22.0
+  - dependency-name: pygments
+    versions:
+    - 2.7.4
+    - 2.8.0
+  - dependency-name: pytest
+    versions:
+    - 6.2.2

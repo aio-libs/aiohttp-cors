@@ -1,4 +1,4 @@
-aiohttp==3.8.0
+aiohttp==3.8.1
 tox==3.24.4
 pytest==6.2.5
 pytest-aiohttp==0.3.0

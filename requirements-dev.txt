@@ -9,6 +9,6 @@ pytest-pylint==0.18.0
 pytest-sugar==0.9.4
 flake8==4.0.1
 selenium==4.0.0
-docutils==0.18
+docutils==0.18.1
 pygments==2.10.0
 -e .

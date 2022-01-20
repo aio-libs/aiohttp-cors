@@ -147,6 +147,7 @@ async def test_simple_no_origin(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -166,6 +167,7 @@ async def test_simple_allowed_origin(aiohttp_client, make_app):
 
     for hdr, val in {
             hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.VARY: hdrs.ORIGIN,
     }.items():
         assert resp.headers.get(hdr) == val
 
@@ -193,6 +195,7 @@ async def test_simple_not_allowed_origin(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -214,6 +217,7 @@ async def test_simple_explicit_port(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -235,6 +239,7 @@ async def test_simple_different_scheme(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -263,6 +268,7 @@ async def test_cred_no_origin(aiohttp_client, app_for_credentials):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -281,6 +287,7 @@ async def test_cred_allowed_origin(aiohttp_client, app_for_credentials):
 
     for hdr, val in {
             hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.VARY: hdrs.ORIGIN,
             hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS: "true"}.items():
         assert resp.headers.get(hdr) == val
 
@@ -306,6 +313,7 @@ async def test_cred_disallowed_origin(aiohttp_client, app_for_credentials):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -326,6 +334,7 @@ async def test_simple_expose_headers_no_origin(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -346,6 +355,7 @@ async def test_simple_expose_headers_allowed_origin(aiohttp_client, make_app):
 
     for hdr, val in {
             hdrs.ACCESS_CONTROL_ALLOW_ORIGIN: 'http://client1.example.org',
+            hdrs.VARY: hdrs.ORIGIN,
             hdrs.ACCESS_CONTROL_EXPOSE_HEADERS:
             SERVER_CUSTOM_HEADER_NAME}.items():
         assert resp.headers.get(hdr) == val
@@ -375,6 +385,7 @@ async def test_simple_expose_headers_not_allowed_origin(aiohttp_client,
                         hdrs.ACCESS_CONTROL_ALLOW_ORIGIN,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -397,6 +408,7 @@ async def test_preflight_default_no_origin(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_METHODS,
                         hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -423,6 +435,7 @@ async def test_preflight_default_no_method(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_METHODS,
                         hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -452,6 +465,7 @@ async def test_preflight_default_origin_and_method(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_MAX_AGE,
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -478,6 +492,7 @@ async def test_preflight_default_disallowed_origin(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_METHODS,
                         hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 
@@ -505,6 +520,7 @@ async def test_preflight_default_disallowed_method(aiohttp_client, make_app):
                         hdrs.ACCESS_CONTROL_EXPOSE_HEADERS,
                         hdrs.ACCESS_CONTROL_ALLOW_METHODS,
                         hdrs.ACCESS_CONTROL_ALLOW_HEADERS,
+                        hdrs.VARY,
                     }:
         assert header_name not in resp.headers
 

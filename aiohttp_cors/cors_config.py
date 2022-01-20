@@ -190,6 +190,7 @@ class _CorsConfigImpl(_PreflightHandler):
         # Process according to CORS 6.1.3.
         # Set allowed origin.
         response.headers[hdrs.ACCESS_CONTROL_ALLOW_ORIGIN] = origin
+        response.headers[hdrs.VARY] = hdrs.ORIGIN
         if options.allow_credentials:
             # Set allowed credentials.
             response.headers[hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS] = _TRUE

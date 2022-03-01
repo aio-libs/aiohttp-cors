@@ -29,8 +29,7 @@ async def _handler(request):
 
 class _View(web.View, CorsViewMixin):
 
-    @asyncio.coroutine
-    def get(self):
+    async def get(self):
         return web.Response(text="Done")
 
 

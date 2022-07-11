@@ -6,7 +6,7 @@ pytest-cov==3.0.0
 pytest-runner==5.2
 pytest-flakes==4.0.5
 pytest-pylint==0.18.0
-pytest-sugar==0.9.4
+pytest-sugar==0.9.5
 flake8==4.0.1
 selenium==4.1.0
 docutils==0.18.1

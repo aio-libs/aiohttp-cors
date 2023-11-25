@@ -84,5 +84,6 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX",
         "Development Status :: 3 - Alpha",
+        "Framework :: aiohttp",
     ],
 )

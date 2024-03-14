@@ -225,8 +225,6 @@ class CorsConfig:
 
         self.defaults = _parse_config_options(defaults)
 
-        self._cors_impl = None
-
         self._resources_router_adapter = None
         self._resources_cors_impl = None
 

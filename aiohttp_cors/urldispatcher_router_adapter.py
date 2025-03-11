@@ -131,8 +131,8 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         # Mapping from Resource to _ResourceConfig.
         self._resource_config: Dict[web.AbstractResource, _ResourceConfig] = {} 
 
-        self._resources_with_preflight_handlers = set()  # type: Set[web.AbstractResource]
-        self._preflight_routes = set()  # type: Set[web.AbstractRoute]
+        self._resources_with_preflight_handlers: Set[web.AbstractResource] = set()
+        self._preflight_routes: Set[web.AbstractRoute] = set()
 
     def add_preflight_handler(
             self,

@@ -129,7 +129,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         self._default_config = defaults
 
         # Mapping from Resource to _ResourceConfig.
-        self._resource_config = {}  # type: Dict[web.AbstractResource, _ResourceConfig]
+        self._resource_config: Dict[web.AbstractResource, _ResourceConfig] = {} 
 
         self._resources_with_preflight_handlers = set()  # type: Set[web.AbstractResource]
         self._preflight_routes = set()  # type: Set[web.AbstractRoute]
@@ -145,7 +145,7 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         Should fail if there are conflicting user-defined OPTIONS handlers.
         """
 
-        resource = None  # type: Union[web.Resource, web.StaticResource, web.ResourceRoute]  # type: ignore
+        resource: Union[web.Resource, web.StaticResource, web.ResourceRoute, None] = None  
         if isinstance(routing_entity, web.Resource):
             resource = routing_entity
 

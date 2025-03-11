@@ -34,7 +34,7 @@ __all__ = (
 )
 
 
-APP_CONFIG_KEY = "aiohttp_cors"
+APP_CONFIG_KEY: web.AppKey[CorsConfig] = web.AppKey("aiohttp_cors", CorsConfig)
 
 
 def setup(app: web.Application, *,

@@ -65,8 +65,7 @@ setup(
     ],
     test_suite="tests",
     install_requires=[
-        "aiohttp>=1.1",
-        "typing;python_version<'3.5'",
+        "aiohttp>=3.9",
     ],
     license=about["__license__"],
     classifiers=[
@@ -74,9 +73,6 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries",
         "Topic :: Internet :: WWW/HTTP",
         "Framework :: AsyncIO",

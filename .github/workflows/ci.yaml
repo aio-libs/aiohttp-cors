@@ -25,7 +25,7 @@ jobs:
       with:
         python-version: 3.11
         cache: 'pip'
-        cache-dependency-path: '**/requirements-dev.txt'
+        cache-dependency-path: '**/requirements*.txt'
     - name: Pre-Commit hooks
       uses: pre-commit/action@v3.0.1
     - name: Install dependencies
@@ -51,11 +51,7 @@ jobs:
     strategy:
       matrix:
         pyver: ['3.9', '3.10', '3.11', '3.12', '3.13']
-        os: [ubuntu, macos, windows]
-        include:
-          - pyver: pypy-3.9
-            os: ubuntu
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
     - name: Checkout

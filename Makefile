@@ -1,8 +1,8 @@
 all: test
 
 
-flake:
-	flake8 aiohttp_cors tests setup.py
+lint:
+	pre-commit run --all-files
 
-test: flake
+test: lint
 	pytest tests

@@ -1,6 +1,6 @@
 -e .
 aiohttp==3.11.0b0
-flake8==4.0.1
+flake8==7.1.2
 packaging==24.2
 pytest==8.3.5
 pytest-aiohttp==0.3.0

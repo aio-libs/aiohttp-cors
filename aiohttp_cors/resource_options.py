@@ -12,32 +12,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Resource CORS options class definition.
-"""
+"""Resource CORS options class definition."""
 
-import numbers
 import collections
 import collections.abc
+import numbers
 
 __all__ = ("ResourceOptions",)
 
 
 def _is_proper_sequence(seq):
     """Returns is seq is sequence and not string."""
-    return (isinstance(seq, collections.abc.Sequence) and
-            not isinstance(seq, str))
+    return isinstance(seq, collections.abc.Sequence) and not isinstance(seq, str)
 
 
-class ResourceOptions(collections.namedtuple(
+class ResourceOptions(
+    collections.namedtuple(
         "Base",
-        ("allow_credentials", "expose_headers", "allow_headers", "max_age",
-         "allow_methods"))):
+        (
+            "allow_credentials",
+            "expose_headers",
+            "allow_headers",
+            "max_age",
+            "allow_methods",
+        ),
+    )
+):
     """Resource CORS options."""
 
     __slots__ = ()
 
-    def __init__(self, *, allow_credentials=False, expose_headers=(),
-                 allow_headers=(), max_age=None, allow_methods=None):
+    def __init__(
+        self,
+        *,
+        allow_credentials=False,
+        expose_headers=(),
+        allow_headers=(),
+        max_age=None,
+        allow_methods=None
+    ):
         """Construct resource CORS options.
 
         Options will be normalized.
@@ -77,14 +90,22 @@ class ResourceOptions(collections.namedtuple(
         """
         super().__init__()
 
-    def __new__(cls, *, allow_credentials=False, expose_headers=(),
-                allow_headers=(), max_age=None, allow_methods=None):
+    def __new__(
+        cls,
+        *,
+        allow_credentials=False,
+        expose_headers=(),
+        allow_headers=(),
+        max_age=None,
+        allow_methods=None
+    ):
         """Normalize source parameters and store them in namedtuple."""
 
         if not isinstance(allow_credentials, bool):
             raise ValueError(
                 "'allow_credentials' must be boolean, "
-                "got '{!r}'".format(allow_credentials))
+                "got '{!r}'".format(allow_credentials)
+            )
         _allow_credentials = allow_credentials
 
         # `expose_headers` is either "*", or sequence of strings.
@@ -93,7 +114,8 @@ class ResourceOptions(collections.namedtuple(
         elif not _is_proper_sequence(expose_headers):
             raise ValueError(
                 "'expose_headers' must be either '*', or sequence of strings, "
-                "got '{!r}'".format(expose_headers))
+                "got '{!r}'".format(expose_headers)
+            )
         elif expose_headers:
             # "Access-Control-Expose-Headers" ":" #field-name
             # TODO: Check that headers are valid.
@@ -111,7 +133,8 @@ class ResourceOptions(collections.namedtuple(
         elif not _is_proper_sequence(allow_headers):
             raise ValueError(
                 "'allow_headers' must be either '*', or sequence of strings, "
-                "got '{!r}'".format(allow_headers))
+                "got '{!r}'".format(allow_headers)
+            )
         else:
             # TODO: Check that headers are valid.
             _allow_headers = frozenset(h.upper() for h in allow_headers)
@@ -122,7 +145,8 @@ class ResourceOptions(collections.namedtuple(
             if not isinstance(max_age, numbers.Integral) or max_age < 0:
                 raise ValueError(
                     "'max_age' must be non-negative integer, "
-                    "got '{!r}'".format(max_age))
+                    "got '{!r}'".format(max_age)
+                )
             _max_age = max_age
 
         if allow_methods is None or allow_methods == "*":
@@ -130,7 +154,8 @@ class ResourceOptions(collections.namedtuple(
         elif not _is_proper_sequence(allow_methods):
             raise ValueError(
                 "'allow_methods' must be either '*', or sequence of strings, "
-                "got '{!r}'".format(allow_methods))
+                "got '{!r}'".format(allow_methods)
+            )
         else:
             # TODO: Check that methods are valid.
             _allow_methods = frozenset(m.upper() for m in allow_methods)
@@ -141,13 +166,14 @@ class ResourceOptions(collections.namedtuple(
             expose_headers=_expose_headers,
             allow_headers=_allow_headers,
             max_age=_max_age,
-            allow_methods=_allow_methods)
+            allow_methods=_allow_methods,
+        )
 
     def is_method_allowed(self, method):
         if self.allow_methods is None:
             return False
 
-        if self.allow_methods == '*':
+        if self.allow_methods == "*":
             return True
 
         return method.upper() in self.allow_methods

@@ -12,7 +12,6 @@
 	"eqeqeq": true,
 	"eqnull": true,
 	"es3": true,
-	"esnext": false,
 	"evil": false,
 	"expr": true,
 	"forin": false,

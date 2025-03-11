@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""aiohttp_cors.resource_options unit tests.
-"""
+"""aiohttp_cors.resource_options unit tests."""
 
 import pytest
 
@@ -39,13 +38,15 @@ def test_comparison():
 
 def test_allow_methods():
     assert ResourceOptions().allow_methods is None
-    assert ResourceOptions(allow_methods='*').allow_methods == '*'
+    assert ResourceOptions(allow_methods="*").allow_methods == "*"
     assert ResourceOptions(allow_methods=[]).allow_methods == frozenset()
-    assert (ResourceOptions(allow_methods=['get']).allow_methods ==
-            frozenset(['GET']))
-    assert (ResourceOptions(allow_methods=['get', 'Post']).allow_methods ==
-            {'GET', 'POST'})
+    assert ResourceOptions(allow_methods=["get"]).allow_methods == frozenset(["GET"])
+    assert ResourceOptions(allow_methods=["get", "Post"]).allow_methods == {
+        "GET",
+        "POST",
+    }
     with pytest.raises(ValueError):
-        ResourceOptions(allow_methods='GET')
+        ResourceOptions(allow_methods="GET")
+
 
 # TODO: test arguments parsing

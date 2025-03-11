@@ -5,9 +5,10 @@ from .preflight_handler import _PreflightHandler
 
 def custom_cors(config):
     def wrapper(function):
-        name = "{}_cors_config".format(function.__name__)
+        name = f"{function.__name__}_cors_config"
         setattr(function, name, config)
         return function
+
     return wrapper
 
 
@@ -18,6 +19,7 @@ class CorsViewMixin(_PreflightHandler):
     def get_request_config(cls, request, request_method):
         try:
             from . import APP_CONFIG_KEY
+
             cors = request.app[APP_CONFIG_KEY]
         except KeyError:
             raise ValueError("aiohttp-cors is not configured.")
@@ -27,7 +29,7 @@ class CorsViewMixin(_PreflightHandler):
         if not method:
             raise KeyError()
 
-        config_property_key = "{}_cors_config".format(request_method.lower())
+        config_property_key = f"{request_method.lower()}_cors_config"
 
         custom_config = getattr(method, config_property_key, None)
         if not custom_config:

@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Abstract base classes.
-"""
+"""Abstract base classes."""
 
 from abc import ABCMeta, abstractmethod
 
 from aiohttp import web
-
 
 __all__ = ("AbstractRouterAdapter",)
 
@@ -46,14 +44,11 @@ class AbstractRouterAdapter(metaclass=ABCMeta):
 
     In aiohttp >= 0.21.0 there are two routing entities: Resource and Route.
     You can configure CORS for Resource (which will be interpreted as default
-    for all Routes on Resoures), and configure CORS for specific Route.
+    for all Routes on Resources), and configure CORS for specific Route.
     """
 
     @abstractmethod
-    def add_preflight_handler(self,
-                              routing_entity,
-                              handler,
-                              webview: bool=False):
+    def add_preflight_handler(self, routing_entity, handler, webview: bool = False):
         """Add OPTIONS handler for all routes defined by `routing_entity`.
 
         Does nothing if CORS handler already handles routing entity.
@@ -69,9 +64,7 @@ class AbstractRouterAdapter(metaclass=ABCMeta):
         """Is `request` is a request for CORS-enabled resource."""
 
     @abstractmethod
-    def set_config_for_routing_entity(self,
-                                      routing_entity,
-                                      config):
+    def set_config_for_routing_entity(self, routing_entity, config):
         """Record configuration for routing entity.
 
         If router implements hierarchical routing entities, stored config
@@ -83,10 +76,8 @@ class AbstractRouterAdapter(metaclass=ABCMeta):
 
     @abstractmethod
     async def get_preflight_request_config(
-            self,
-            preflight_request: web.Request,
-            origin: str,
-            requested_method: str):
+        self, preflight_request: web.Request, origin: str, requested_method: str
+    ):
         """Get stored CORS configuration for specified HTTP method and origin
         that corresponds to preflight request.
 

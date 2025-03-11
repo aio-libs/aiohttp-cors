@@ -14,6 +14,7 @@
 
 import os
 import sys
+
 from setuptools import setup
 
 
@@ -26,14 +27,16 @@ def read_file(filename):
 about = {}
 exec(read_file(os.path.join("aiohttp_cors", "__about__.py")), about)
 
-needs_pytest = {'pytest', 'test'}.intersection(sys.argv)
-pytest_runner = ['pytest_runner'] if needs_pytest else []
+needs_pytest = {"pytest", "test"}.intersection(sys.argv)
+pytest_runner = ["pytest_runner"] if needs_pytest else []
 
 # aiohttp requires Python >= 3.4.1, so as aiohttp_cors.
 if sys.version_info[:3] < (3, 4, 1):
-    print("Error: aiohttp_cors requires Python interpreter version >= 3.4.1, "
-          "this interpreter has version '{}'".format(sys.version),
-          file=sys.stderr)
+    print(
+        "Error: aiohttp_cors requires Python interpreter version >= 3.4.1, "
+        "this interpreter has version '{}'".format(sys.version),
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 
@@ -44,10 +47,12 @@ setup(
     author_email=about["__email__"],
     description=about["__summary__"],
     url=about["__uri__"],
-    long_description="\n\n".join((
-        read_file("README.rst"),
-        read_file("CHANGES.rst"),
-    )),
+    long_description="\n\n".join(
+        (
+            read_file("README.rst"),
+            read_file("CHANGES.rst"),
+        )
+    ),
     packages=["aiohttp_cors"],
     setup_requires=[
         # Environment markers were implemented and stabilized in setuptools
@@ -56,7 +61,8 @@ setup(
         # If line above doesn't work, check that you have at least
         # setuptools v19.4 (released 2016-01-16):
         # <https://github.com/pypa/setuptools/issues/141>
-    ] + pytest_runner,
+    ]
+    + pytest_runner,
     tests_require=[
         "pytest",
         "pytest-cov",

@@ -8,13 +8,13 @@ class _PreflightHandler:
 
     @staticmethod
     def _parse_request_method(request: web.Request):
-        """Parse Access-Control-Request-Method header of the preflight request
-        """
+        """Parse Access-Control-Request-Method header of the preflight request"""
         method = request.headers.get(hdrs.ACCESS_CONTROL_REQUEST_METHOD)
         if method is None:
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "
-                     "'Access-Control-Request-Method' header is not specified")
+                "'Access-Control-Request-Method' header is not specified"
+            )
 
         # FIXME: validate method string (ABNF: method = token), if parsing
         # fails, raise HTTPForbidden.
@@ -52,7 +52,8 @@ class _PreflightHandler:
             # Terminate CORS according to CORS 6.2.1.
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "
-                     "origin header is not specified in the request")
+                "origin header is not specified in the request"
+            )
 
         # CORS 6.2.3. Doing it out of order is not an error.
         request_method = self._parse_request_method(request)
@@ -60,20 +61,20 @@ class _PreflightHandler:
         # CORS 6.2.5. Doing it out of order is not an error.
 
         try:
-            config = \
-                await self._get_config(request, origin, request_method)
+            config = await self._get_config(request, origin, request_method)
         except KeyError:
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "
-                     "request method {!r} is not allowed "
-                     "for {!r} origin".format(request_method, origin))
+                "request method {!r} is not allowed "
+                "for {!r} origin".format(request_method, origin)
+            )
 
         if not config:
             # No allowed origins for the route.
             # Terminate CORS according to CORS 6.2.1.
             raise web.HTTPForbidden(
-                text="CORS preflight request failed: "
-                     "no origins are allowed")
+                text="CORS preflight request failed: " "no origins are allowed"
+            )
 
         options = config.get(origin, config.get("*"))
         if options is None:
@@ -81,7 +82,8 @@ class _PreflightHandler:
             # Terminate CORS according to CORS 6.2.2.
             raise web.HTTPForbidden(
                 text="CORS preflight request failed: "
-                     "origin '{}' is not allowed".format(origin))
+                "origin '{}' is not allowed".format(origin)
+            )
 
         # CORS 6.2.4
         request_headers = self._parse_request_headers(request)
@@ -94,8 +96,8 @@ class _PreflightHandler:
             if disallowed_headers:
                 raise web.HTTPForbidden(
                     text="CORS preflight request failed: "
-                         "headers are not allowed: {}".format(
-                             ", ".join(disallowed_headers)))
+                    "headers are not allowed: {}".format(", ".join(disallowed_headers))
+                )
 
         # Ok, CORS actual request with specified in the preflight request
         # parameters is allowed.
@@ -111,8 +113,7 @@ class _PreflightHandler:
 
         # CORS 6.2.8
         if options.max_age is not None:
-            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = \
-                str(options.max_age)
+            response.headers[hdrs.ACCESS_CONTROL_MAX_AGE] = str(options.max_age)
 
         # CORS 6.2.9
         # TODO: more optimal for client preflight request cache would be to
@@ -124,7 +125,8 @@ class _PreflightHandler:
             # Note: case of the headers in the request is changed, but this
             # shouldn't be a problem, since the headers should be compared in
             # the case-insensitive way.
-            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS] = \
-                ",".join(request_headers)
+            response.headers[hdrs.ACCESS_CONTROL_ALLOW_HEADERS] = ",".join(
+                request_headers
+            )
 
         return response

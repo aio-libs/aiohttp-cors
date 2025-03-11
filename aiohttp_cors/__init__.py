@@ -12,34 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""CORS support for aiohttp.
-"""
+"""CORS support for aiohttp."""
 
-from typing import Mapping, Union, Any
+from collections.abc import Mapping
+from typing import Any, Union
 
 from aiohttp import web
 
 from .__about__ import (
-    __title__, __version__, __author__, __email__, __summary__, __uri__,
-    __license__, __copyright__,
+    __author__,
+    __copyright__,
+    __email__,
+    __license__,
+    __summary__,
+    __title__,
+    __uri__,
+    __version__,
 )
-from .resource_options import ResourceOptions
 from .cors_config import CorsConfig
 from .mixin import CorsViewMixin, custom_cors
+from .resource_options import ResourceOptions
 
 __all__ = (
-    "__title__", "__version__", "__author__", "__email__", "__summary__",
-    "__uri__", "__license__", "__copyright__",
-    "setup", "CorsConfig", "ResourceOptions", "CorsViewMixin", "custom_cors"
+    "CorsConfig",
+    "CorsViewMixin",
+    "ResourceOptions",
+    "__author__",
+    "__copyright__",
+    "__email__",
+    "__license__",
+    "__summary__",
+    "__title__",
+    "__uri__",
+    "__version__",
+    "custom_cors",
+    "setup",
 )
 
 
 APP_CONFIG_KEY: web.AppKey[CorsConfig] = web.AppKey("aiohttp_cors", CorsConfig)
 
 
-def setup(app: web.Application, *,
-          defaults: Mapping[str, Union[ResourceOptions,
-                                       Mapping[str, Any]]]=None) -> CorsConfig:
+def setup(
+    app: web.Application,
+    *,
+    defaults: Mapping[str, Union[ResourceOptions, Mapping[str, Any]]] = None
+) -> CorsConfig:
     """Setup CORS processing for the application.
 
     To enable CORS for a resource you need to explicitly add route for

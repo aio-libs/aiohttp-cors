@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Test aiohttp_cors package metainformation.
-"""
+"""Test aiohttp_cors package metainformation."""
 
-from pkg_resources import parse_version
+from packaging.version import parse
 
 import aiohttp_cors
 
@@ -23,4 +22,4 @@ import aiohttp_cors
 def test_version():
     """Test package version string"""
     # not raised
-    parse_version(aiohttp_cors.__version__)
+    parse(aiohttp_cors.__version__)

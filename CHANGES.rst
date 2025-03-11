@@ -2,6 +2,11 @@
  CHANGES
 =========
 
+0.8.0 (2025-03-11)
+==================
+
+- Make the library compatible with aiohttp 3.9+ and Python 3.9+
+
 0.7.0 (2018-03-05)
 ==================
 

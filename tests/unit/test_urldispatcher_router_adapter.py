@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""aiohttp_cors.urldispatcher_router_adapter unit tests.
-"""
+"""aiohttp_cors.urldispatcher_router_adapter unit tests."""
 
 from unittest import mock
 
 import pytest
-from aiohttp import web
 
-from aiohttp_cors.urldispatcher_router_adapter import \
-    ResourcesUrlDispatcherRouterAdapter
+from aiohttp import web
 from aiohttp_cors import ResourceOptions
+from aiohttp_cors.urldispatcher_router_adapter import (
+    ResourcesUrlDispatcherRouterAdapter,
+)
 
 
 async def _handler(request):
@@ -37,27 +37,23 @@ def app():
 @pytest.fixture
 def adapter(app):
     return ResourcesUrlDispatcherRouterAdapter(
-        app.router, defaults={
-            "*": ResourceOptions()
-        })
+        app.router, defaults={"*": ResourceOptions()}
+    )
 
 
 @pytest.fixture
 def get_route(app):
-    return app.router.add_route(
-        "GET", "/get_path", _handler)
+    return app.router.add_route("GET", "/get_path", _handler)
 
 
 @pytest.fixture
 def options_route(app):
-    return app.router.add_route(
-        "OPTIONS", "/options_path", _handler)
+    return app.router.add_route("OPTIONS", "/options_path", _handler)
 
 
 def test_add_get_route(adapter, get_route):
     """Test configuring GET route"""
-    result = adapter.add_preflight_handler(
-        get_route.resource, _handler)
+    result = adapter.add_preflight_handler(get_route.resource, _handler)
     assert result is None
 
     assert len(adapter._resource_config) == 0
@@ -77,40 +73,43 @@ def test_add_options_route(adapter, options_route):
 def test_get_non_preflight_request_config(adapter, get_route):
     adapter.add_preflight_handler(get_route.resource, _handler)
     adapter.set_config_for_routing_entity(
-        get_route.resource, {
-            'http://example.org': ResourceOptions(),
-        })
+        get_route.resource,
+        {
+            "http://example.org": ResourceOptions(),
+        },
+    )
 
     adapter.add_preflight_handler(get_route, _handler)
     adapter.set_config_for_routing_entity(
-        get_route, {
-            'http://test.example.org': ResourceOptions(),
-        })
+        get_route,
+        {
+            "http://test.example.org": ResourceOptions(),
+        },
+    )
 
     request = mock.Mock()
 
-    with mock.patch('aiohttp_cors.urldispatcher_router_adapter.'
-                    'ResourcesUrlDispatcherRouterAdapter.'
-                    'is_cors_enabled_on_request'
-                    ) as is_cors_enabled_on_request, \
-        mock.patch('aiohttp_cors.urldispatcher_router_adapter.'
-                   'ResourcesUrlDispatcherRouterAdapter.'
-                   '_request_resource'
-                   ) as _request_resource:
+    with mock.patch(
+        "aiohttp_cors.urldispatcher_router_adapter."
+        "ResourcesUrlDispatcherRouterAdapter."
+        "is_cors_enabled_on_request"
+    ) as is_cors_enabled_on_request, mock.patch(
+        "aiohttp_cors.urldispatcher_router_adapter."
+        "ResourcesUrlDispatcherRouterAdapter."
+        "_request_resource"
+    ) as _request_resource:
         is_cors_enabled_on_request.return_value = True
         _request_resource.return_value = get_route.resource
 
-        assert (adapter.get_non_preflight_request_config(request) ==
-                {
-                    '*': ResourceOptions(),
-                    'http://example.org': ResourceOptions(),
-                })
+        assert adapter.get_non_preflight_request_config(request) == {
+            "*": ResourceOptions(),
+            "http://example.org": ResourceOptions(),
+        }
 
-        request.method = 'GET'
+        request.method = "GET"
 
-        assert (adapter.get_non_preflight_request_config(request) ==
-                {
-                    '*': ResourceOptions(),
-                    'http://example.org': ResourceOptions(),
-                    'http://test.example.org': ResourceOptions(),
-                })
+        assert adapter.get_non_preflight_request_config(request) == {
+            "*": ResourceOptions(),
+            "http://example.org": ResourceOptions(),
+            "http://test.example.org": ResourceOptions(),
+        }

@@ -19,15 +19,16 @@ async def test_main():
     # This tests corresponds to example from documentation.
     # If you updating it, don't forget to update documentation.
 
-    from aiohttp import web
     import aiohttp_cors
+    from aiohttp import web
 
     async def handler(request):
         return web.Response(
             text="Hello!",
             headers={
                 "X-Custom-Server-Header": "Custom data",
-            })
+            },
+        )
 
     app = web.Application()
 
@@ -41,14 +42,16 @@ async def test_main():
     # CORS options.
     resource = cors.add(app.router.add_resource("/hello"))
     route = cors.add(
-        resource.add_route("GET", handler), {
+        resource.add_route("GET", handler),
+        {
             "http://client.example.org": aiohttp_cors.ResourceOptions(
                 allow_credentials=True,
                 expose_headers=("X-Custom-Server-Header",),
                 allow_headers=("X-Requested-With", "Content-Type"),
                 max_age=3600,
             )
-        })
+        },
+    )
 
     assert route is not None
 
@@ -57,15 +60,16 @@ async def test_defaults():
     # This tests corresponds to example from documentation.
     # If you updating it, don't forget to update documentation.
 
-    from aiohttp import web
     import aiohttp_cors
+    from aiohttp import web
 
     async def handler(request):
         return web.Response(
             text="Hello!",
             headers={
                 "X-Custom-Server-Header": "Custom data",
-            })
+            },
+        )
 
     handler_post = handler
     handler_put = handler
@@ -74,11 +78,14 @@ async def test_defaults():
 
     # Example:
 
-    cors = aiohttp_cors.setup(app, defaults={
+    cors = aiohttp_cors.setup(
+        app,
+        defaults={
             # Allow all to read all CORS-enabled resources from
             # http://client.example.org.
             "http://client.example.org": aiohttp_cors.ResourceOptions(),
-        })
+        },
+    )
 
     # Enable CORS on routes.
 
@@ -90,10 +97,12 @@ async def test_defaults():
 
     # In addition to "http://client.example.org", GET request will be
     # allowed from "http://other-client.example.org" origin.
-    cors.add(hello_resource.add_route("GET", handler), {
-            "http://other-client.example.org":
-            aiohttp_cors.ResourceOptions(),
-        })
+    cors.add(
+        hello_resource.add_route("GET", handler),
+        {
+            "http://other-client.example.org": aiohttp_cors.ResourceOptions(),
+        },
+    )
 
     # CORS will be enabled only on the resources added to `CorsConfig`,
     # so following resource will be NOT CORS-enabled.

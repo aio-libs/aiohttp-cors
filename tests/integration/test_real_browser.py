@@ -12,28 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""System test using real browser.
-"""
+"""System test using real browser."""
 
-import os
-import json
 import asyncio
-import socket
-import pathlib
+import json
 import logging
+import os
+import pathlib
+import socket
 import webbrowser
 
-from aiohttp import web, hdrs
 import pytest
-
 import selenium.common.exceptions
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-from aiohttp_cors import setup as _setup, ResourceOptions, CorsViewMixin
+from aiohttp import hdrs, web
+from aiohttp_cors import CorsViewMixin, ResourceOptions, setup as _setup
 
 
 class _ServerDescr:
@@ -72,25 +70,26 @@ class IntegrationServers:
         async def handle_test_page(request: web.Request) -> web.StreamResponse:
             with test_page_path.open("r", encoding="utf-8") as f:
                 return web.Response(
-                    text=f.read(),
-                    headers={hdrs.CONTENT_TYPE: "text/html"})
+                    text=f.read(), headers={hdrs.CONTENT_TYPE: "text/html"}
+                )
 
         async def handle_no_cors(request: web.Request) -> web.StreamResponse:
             return web.Response(
                 text="""{"type": "no_cors.json"}""",
-                headers={hdrs.CONTENT_TYPE: "application/json"})
+                headers={hdrs.CONTENT_TYPE: "application/json"},
+            )
 
         async def handle_resource(request: web.Request) -> web.StreamResponse:
             return web.Response(
                 text="""{"type": "resource"}""",
-                headers={hdrs.CONTENT_TYPE: "application/json"})
+                headers={hdrs.CONTENT_TYPE: "application/json"},
+            )
 
-        async def handle_servers_addresses(
-                request: web.Request) -> web.StreamResponse:
-            servers_addresses = \
-                {name: descr.url for name, descr in self.servers.items()}
-            return web.Response(
-                text=json.dumps(servers_addresses))
+        async def handle_servers_addresses(request: web.Request) -> web.StreamResponse:
+            servers_addresses = {
+                name: descr.url for name, descr in self.servers.items()
+            }
+            return web.Response(text=json.dumps(servers_addresses))
 
         class ResourceView(web.View, CorsViewMixin):
 
@@ -123,45 +122,43 @@ class IntegrationServers:
             server_sockets[server_name] = sock
 
             hostaddr, port = sock.getsockname()
-            server_descr.url = "http://{host}:{port}".format(
-                host=hostaddr, port=port)
+            server_descr.url = f"http://{hostaddr}:{port}"
 
         # Server test page from origin server.
+        self.servers["origin"].app.router.add_route("GET", "/", handle_test_page)
         self.servers["origin"].app.router.add_route(
-            "GET", "/", handle_test_page)
-        self.servers["origin"].app.router.add_route(
-            "GET", "/servers_addresses", handle_servers_addresses)
+            "GET", "/servers_addresses", handle_servers_addresses
+        )
 
         # Add routes to all servers.
         for server_name in server_names:
             app = self.servers[server_name].app
             app.router.add_route("GET", "/no_cors.json", handle_no_cors)
             if self.use_webview:
-                app.router.add_route("*", "/cors_resource", ResourceView,
-                                     name="cors_resource")
+                app.router.add_route(
+                    "*", "/cors_resource", ResourceView, name="cors_resource"
+                )
             else:
-                app.router.add_route("GET", "/cors_resource", handle_resource,
-                                     name="cors_resource")
+                app.router.add_route(
+                    "GET", "/cors_resource", handle_resource, name="cors_resource"
+                )
 
         cors_default_configs = {
             "allowing": {
-                self.servers["origin"].url:
-                    ResourceOptions(
-                        allow_credentials=True, expose_headers="*",
-                        allow_headers="*")
+                self.servers["origin"].url: ResourceOptions(
+                    allow_credentials=True, expose_headers="*", allow_headers="*"
+                )
             },
             "denying": {
                 # Allow requests to other than "origin" server.
-                self.servers["allowing"].url:
-                    ResourceOptions(
-                        allow_credentials=True, expose_headers="*",
-                        allow_headers="*")
+                self.servers["allowing"].url: ResourceOptions(
+                    allow_credentials=True, expose_headers="*", allow_headers="*"
+                )
             },
             "free_for_all": {
-                "*":
-                    ResourceOptions(
-                        allow_credentials=True, expose_headers="*",
-                        allow_headers="*")
+                "*": ResourceOptions(
+                    allow_credentials=True, expose_headers="*", allow_headers="*"
+                )
             },
         }
 
@@ -170,8 +167,7 @@ class IntegrationServers:
             default_config = cors_default_configs.get(server_name)
             if default_config is None:
                 continue
-            server_descr.cors = _setup(
-                server_descr.app, defaults=default_config)
+            server_descr.cors = _setup(server_descr.app, defaults=default_config)
 
         # Add CORS routes.
         for server_name in cors_server_names:
@@ -199,8 +195,9 @@ class IntegrationServers:
             await site.start()
             server_descr.runner = runner
 
-            self._logger.info("Started server '%s' at '%s'",
-                              server_name, server_descr.url)
+            self._logger.info(
+                "Started server '%s' at '%s'", server_name, server_descr.url
+            )
 
     async def stop_servers(self):
         for server_descr in self.servers.values():
@@ -222,18 +219,16 @@ def _get_chrome_driver():
     return driver
 
 
-@pytest.fixture(params=[(False, False),
-                        (True, False),
-                        (False, True)])
+@pytest.fixture(params=[(False, False), (True, False), (False, True)])
 def server(request, loop):
     async def inner():
         # to grab implicit loop
         return IntegrationServers(*request.param)
+
     return loop.run_until_complete(inner())
 
 
-@pytest.fixture(params=[webdriver.Firefox,
-                        _get_chrome_driver])
+@pytest.fixture(params=[webdriver.Firefox, _get_chrome_driver])
 def driver(request):
     try:
         driver = request.param()
@@ -254,25 +249,22 @@ async def test_in_webdriver(driver, server):
 
         wait = WebDriverWait(driver, 10)
 
-        run_button = wait.until(EC.element_to_be_clickable(
-            (By.ID, "runTestsButton")))
+        run_button = wait.until(EC.element_to_be_clickable((By.ID, "runTestsButton")))
 
         # Start tests.
         run_button.send_keys(Keys.RETURN)
 
         # Wait while test will finish (until clear button is not
         # activated).
-        wait.until(EC.element_to_be_clickable(
-            (By.ID, "clearResultsButton")))
+        wait.until(EC.element_to_be_clickable((By.ID, "clearResultsButton")))
 
         # Get results json
-        results_area = driver.find_element_by_id("results")
+        results_area = driver.find_element(By.ID, "results")
 
         return json.loads(results_area.get_attribute("value"))
 
     try:
-        results = await loop.run_in_executor(
-            None, selenium_thread)
+        results = await loop.run_in_executor(None, selenium_thread)
 
         assert results["status"] == "success"
         for test_name, test_data in results["data"].items():

@@ -43,3 +43,4 @@ pip-log.txt
 sdist/
 target/
 var/
+.python-version

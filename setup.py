@@ -53,6 +53,7 @@ setup(
             read_file("CHANGES.rst"),
         )
     ),
+    long_description_content_type="text/x-rst",
     packages=["aiohttp_cors"],
     setup_requires=[
         # Environment markers were implemented and stabilized in setuptools

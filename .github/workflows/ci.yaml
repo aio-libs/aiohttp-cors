@@ -99,7 +99,7 @@ jobs:
       contents: write  # IMPORTANT: mandatory for making GitHub Releases
       id-token: write  # IMPORTANT: mandatory for trusted publishing & sigstore
     environment:
-      name: release
+      name: pypi
       url: >-
         https://pypi.org/project/${{ env.PROJECT_NAME }}/${{ github.ref_name }}
     steps:

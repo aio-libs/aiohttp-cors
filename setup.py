@@ -66,6 +66,7 @@ setup(
     + pytest_runner,
     tests_require=[
         "pytest",
+        "pytest-aiohttp",
         "pytest-cov",
         "pytest-pylint",
         "selenium",

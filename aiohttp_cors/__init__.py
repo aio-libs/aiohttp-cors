@@ -14,8 +14,7 @@
 
 """CORS support for aiohttp."""
 
-from collections.abc import Mapping
-from typing import Any, Union
+from typing import Any, Mapping, Union
 
 from aiohttp import web
 

@@ -16,8 +16,7 @@
 
 import collections
 import warnings
-from collections.abc import Mapping
-from typing import Any, Union
+from typing import Any, Mapping, Union
 
 from aiohttp import hdrs, web
 

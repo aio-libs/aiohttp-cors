@@ -30,15 +30,6 @@ exec(read_file(os.path.join("aiohttp_cors", "__about__.py")), about)
 needs_pytest = {"pytest", "test"}.intersection(sys.argv)
 pytest_runner = ["pytest_runner"] if needs_pytest else []
 
-# aiohttp requires Python >= 3.4.1, so as aiohttp_cors.
-if sys.version_info[:3] < (3, 4, 1):
-    print(
-        "Error: aiohttp_cors requires Python interpreter version >= 3.4.1, "
-        "this interpreter has version '{}'".format(sys.version),
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
 
 setup(
     name=about["__title__"],
@@ -74,6 +65,7 @@ setup(
     install_requires=[
         "aiohttp>=3.9",
     ],
+    python_requires=">=3.9",
     license=about["__license__"],
     classifiers=[
         "License :: OSI Approved :: Apache Software License",

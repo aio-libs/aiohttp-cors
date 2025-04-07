@@ -3,7 +3,7 @@ aiohttp==3.11.16
 packaging==24.2
 pytest==8.3.5
 pytest-aiohttp==0.3.0
-pytest-cov==6.1.0
+pytest-cov==6.1.1
 selenium==4.30.0
 tox==4.25.0
 urllib3==2.3.0  # for selenium

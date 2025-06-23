@@ -119,7 +119,7 @@ jobs:
         Publish 🐍📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
     - name: Sign the dists with Sigstore
-      uses: sigstore/gh-action-sigstore-python@v3.0.0
+      uses: sigstore/gh-action-sigstore-python@v3.0.1
       with:
         inputs: >-
           ./dist/${{ env.PROJECT_NAME }}*.tar.gz

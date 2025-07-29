@@ -5,5 +5,5 @@ pytest==8.4.1
 pytest-aiohttp==0.3.0
 pytest-cov==6.2.1
 selenium==4.34.0
-tox==4.28.1
+tox==4.28.3
 urllib3==2.4.0  # for selenium

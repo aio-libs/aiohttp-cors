@@ -1,5 +1,5 @@
 -e .
-aiohttp==3.12.15
+aiohttp==3.13.0
 packaging==25.0
 pytest==8.4.2
 pytest-aiohttp==0.3.0

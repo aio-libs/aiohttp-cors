@@ -57,6 +57,7 @@ setup(
     + pytest_runner,
     tests_require=[
         "pytest",
+        "pytest-asyncio",
         "pytest-cov",
         "pytest-pylint",
         "selenium",

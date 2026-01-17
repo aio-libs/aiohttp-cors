@@ -520,6 +520,15 @@ async def test_preflight_default_disallowed_method(aiohttp_client, make_app):
         assert header_name not in resp.headers
 
 
+async def test_method_not_allowed(aiohttp_client, make_app):
+    app = make_app(None, {"http://client1.example.org": ResourceOptions()})
+
+    client = await aiohttp_client(app)
+
+    resp = await client.post("/resource")
+    assert resp.status == 405
+
+
 async def test_preflight_req_multiple_routes_with_one_options(aiohttp_client):
     """Test CORS preflight handling on resource that is available through
     several routes.

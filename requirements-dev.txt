@@ -1,6 +1,6 @@
 -e .
 aiohttp==3.13.3
-packaging==25.0
+packaging==26.0
 pytest==8.4.2
 pytest-aiohttp==0.3.0
 pytest-cov==7.0.0

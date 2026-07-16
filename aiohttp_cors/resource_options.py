@@ -17,11 +17,12 @@
 import collections
 import collections.abc
 import numbers
+from typing import Any, FrozenSet, Optional, Sequence, Union
 
 __all__ = ("ResourceOptions",)
 
 
-def _is_proper_sequence(seq):
+def _is_proper_sequence(seq: Any) -> bool:
     """Returns is seq is sequence and not string."""
     return isinstance(seq, collections.abc.Sequence) and not isinstance(seq, str)
 
@@ -45,12 +46,12 @@ class ResourceOptions(
     def __init__(
         self,
         *,
-        allow_credentials=False,
-        expose_headers=(),
-        allow_headers=(),
-        max_age=None,
-        allow_methods=None
-    ):
+        allow_credentials: bool = False,
+        expose_headers: Union[str, Sequence[str]] = (),
+        allow_headers: Union[str, Sequence[str]] = (),
+        max_age: Optional[int] = None,
+        allow_methods: Optional[Union[str, Sequence[str]]] = None
+    ) -> None:
         """Construct resource CORS options.
 
         Options will be normalized.
@@ -93,12 +94,12 @@ class ResourceOptions(
     def __new__(
         cls,
         *,
-        allow_credentials=False,
-        expose_headers=(),
-        allow_headers=(),
-        max_age=None,
-        allow_methods=None
-    ):
+        allow_credentials: bool = False,
+        expose_headers: Union[str, Sequence[str]] = (),
+        allow_headers: Union[str, Sequence[str]] = (),
+        max_age: Optional[int] = None,
+        allow_methods: Optional[Union[str, Sequence[str]]] = None
+    ) -> "ResourceOptions":
         """Normalize source parameters and store them in namedtuple."""
 
         if not isinstance(allow_credentials, bool):
@@ -109,6 +110,7 @@ class ResourceOptions(
         _allow_credentials = allow_credentials
 
         # `expose_headers` is either "*", or sequence of strings.
+        _expose_headers: Union[str, FrozenSet[str]]
         if expose_headers == "*":
             _expose_headers = expose_headers
         elif not _is_proper_sequence(expose_headers):
@@ -128,6 +130,7 @@ class ResourceOptions(
             _expose_headers = frozenset()
 
         # `allow_headers` is either "*", or set of headers in upper case.
+        _allow_headers: Union[str, FrozenSet[str]]
         if allow_headers == "*":
             _allow_headers = allow_headers
         elif not _is_proper_sequence(allow_headers):
@@ -149,6 +152,7 @@ class ResourceOptions(
                 )
             _max_age = max_age
 
+        _allow_methods: Optional[Union[str, FrozenSet[str]]]
         if allow_methods is None or allow_methods == "*":
             _allow_methods = allow_methods
         elif not _is_proper_sequence(allow_methods):
@@ -169,7 +173,7 @@ class ResourceOptions(
             allow_methods=_allow_methods,
         )
 
-    def is_method_allowed(self, method):
+    def is_method_allowed(self, method: str) -> bool:
         if self.allow_methods is None:
             return False
 

@@ -17,7 +17,7 @@
 import collections
 import warnings
 from collections.abc import Mapping
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from aiohttp import hdrs, web
 
@@ -45,8 +45,8 @@ _SIMPLE_RESPONSE_HEADERS = frozenset(
 
 
 def _parse_config_options(
-    config: Mapping[str, Union[ResourceOptions, Mapping[str, Any]]] = None,
-):
+    config: Optional[Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]] = None,
+) -> Any:
     """Parse CORS configuration (default or per-route)
 
     :param config:
@@ -113,7 +113,7 @@ class _CorsConfigImpl(_PreflightHandler):
         # headers on non-preflight requests.
         self._app.on_response_prepare.append(self._on_response_prepare)
 
-    def add(self, routing_entity, config: _ConfigType = None):
+    def add(self, routing_entity: Any, config: Optional[_ConfigType] = None) -> Any:
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.
@@ -216,9 +216,9 @@ class CorsConfig:
         self,
         app: web.Application,
         *,
-        defaults: _ConfigType = None,
-        router_adapter: AbstractRouterAdapter = None,
-    ):
+        defaults: Optional[_ConfigType] = None,
+        router_adapter: Optional[AbstractRouterAdapter] = None,
+    ) -> None:
         """Construct CORS configuration.
 
         :param app:
@@ -245,7 +245,12 @@ class CorsConfig:
 
         self._cors_impl = _CorsConfigImpl(app, router_adapter)
 
-    def add(self, routing_entity, config: _ConfigType = None, webview: bool = False):
+    def add(
+        self,
+        routing_entity: Any,
+        config: Optional[_ConfigType] = None,
+        webview: bool = False,
+    ) -> Any:
         """Enable CORS for specific route or resource.
 
         If route is passed CORS is enabled for route's resource.

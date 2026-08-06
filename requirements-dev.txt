@@ -1,7 +1,7 @@
 -e .
 aiohttp==3.13.5
 packaging==26.2
-pytest==8.4.2
+pytest==9.1.1
 pytest-aiohttp==0.3.0
 pytest-cov==7.1.0
 selenium==4.34.0

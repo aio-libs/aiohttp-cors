@@ -88,17 +88,28 @@ def _is_web_view(entity, strict=True):
     webview = False
     if isinstance(entity, web.AbstractRoute):
         handler = entity.handler
-        if isinstance(handler, type) and issubclass(handler, web.View):
-            webview = True
-            if not issubclass(handler, CorsViewMixin):
-                if strict:
-                    raise ValueError(
-                        "web view should be derived from "
-                        "aiohttp_cors.CorsViewMixin for working "
-                        "with the library"
-                    )
-                else:
-                    return False
+        if isinstance(handler, type):
+            try:
+                is_web_view_subclass = issubclass(handler, web.View)
+            except TypeError:
+                # Some libraries (e.g. certain APM/tracing instrumentation)
+                # wrap handlers in proxy objects that satisfy
+                # `isinstance(handler, type)` (via a custom __class__
+                # property) without being real classes, which makes
+                # issubclass() raise "issubclass() arg 1 must be a class".
+                # Such handlers cannot be aiohttp.web.View subclasses.
+                is_web_view_subclass = False
+            if is_web_view_subclass:
+                webview = True
+                if not issubclass(handler, CorsViewMixin):
+                    if strict:
+                        raise ValueError(
+                            "web view should be derived from "
+                            "aiohttp_cors.CorsViewMixin for working "
+                            "with the library"
+                        )
+                    else:
+                        return False
     return webview
 
 

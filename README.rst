@@ -136,12 +136,10 @@ that you want to expose:
 
 .. code-block:: python
 
-    import asyncio
     from aiohttp import web
     import aiohttp_cors
 
-    @asyncio.coroutine
-    def handler(request):
+    async def handler(request):
         return web.Response(
             text="Hello!",
             headers={
@@ -351,24 +349,22 @@ You can also use ``CorsViewMixin`` on ``web.View``:
     class CorsView(web.View, CorsViewMixin):
 
         cors_config = {
-            "*": ResourceOption(
+            "*": ResourceOptions(
                 allow_credentials=True,
                 allow_headers="X-Request-ID",
             )
         }
 
-        @asyncio.coroutine
-        def get(self):
+        async def get(self):
             return web.Response(text="Done")
 
         @custom_cors({
-            "*": ResourceOption(
+            "*": ResourceOptions(
                 allow_credentials=True,
                 allow_headers="*",
             )
         })
-        @asyncio.coroutine
-        def post(self):
+        async def post(self):
             return web.Response(text="Done")
 
     cors = aiohttp_cors.setup(app, defaults={

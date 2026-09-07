@@ -1,5 +1,7 @@
 import asyncio
+import inspect
 from unittest import mock
+import sys
 
 import pytest
 
@@ -89,7 +91,7 @@ def test_method_with_custom_cors(app):
     view = CustomMethodView(request)
 
     assert hasattr(view.post, "post_cors_config")
-    assert asyncio.iscoroutinefunction(view.post)
+    assert inspect.iscoroutinefunction(view.post) or (sys.version_info < (3, 14) and asyncio.iscoroutinefunction(view.post))
     config = view.get_request_config(request, "post")
 
     assert config.get("www.client1.com") == CUSTOM_CONFIG["www.client1.com"]

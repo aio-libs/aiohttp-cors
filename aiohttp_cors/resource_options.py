@@ -17,7 +17,7 @@
 import collections
 import collections.abc
 import numbers
-from typing import Any, FrozenSet, Optional, Sequence, Union
+from typing import Any, FrozenSet, Literal, Optional, Sequence, Union
 
 __all__ = ("ResourceOptions",)
 
@@ -47,10 +47,10 @@ class ResourceOptions(
         self,
         *,
         allow_credentials: bool = False,
-        expose_headers: Union[str, Sequence[str]] = (),
-        allow_headers: Union[str, Sequence[str]] = (),
+        expose_headers: Union[Literal["*"], Sequence[str]] = (),
+        allow_headers: Union[Literal["*"], Sequence[str]] = (),
         max_age: Optional[int] = None,
-        allow_methods: Optional[Union[str, Sequence[str]]] = None
+        allow_methods: Optional[Union[Literal["*"], Sequence[str]]] = None
     ) -> None:
         """Construct resource CORS options.
 
@@ -95,10 +95,10 @@ class ResourceOptions(
         cls,
         *,
         allow_credentials: bool = False,
-        expose_headers: Union[str, Sequence[str]] = (),
-        allow_headers: Union[str, Sequence[str]] = (),
+        expose_headers: Union[Literal["*"], Sequence[str]] = (),
+        allow_headers: Union[Literal["*"], Sequence[str]] = (),
         max_age: Optional[int] = None,
-        allow_methods: Optional[Union[str, Sequence[str]]] = None
+        allow_methods: Optional[Union[Literal["*"], Sequence[str]]] = None
     ) -> "ResourceOptions":
         """Normalize source parameters and store them in namedtuple."""
 

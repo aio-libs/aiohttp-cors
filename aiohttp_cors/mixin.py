@@ -1,10 +1,15 @@
 import collections
+from typing import Any, Callable, Mapping, TypeVar, Union
 
 from .preflight_handler import _PreflightHandler
+from .resource_options import ResourceOptions
+
+_ConfigArg = Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
-def custom_cors(config):
-    def wrapper(function):
+def custom_cors(config: _ConfigArg) -> Callable[[_F], _F]:
+    def wrapper(function: _F) -> _F:
         name = f"{function.__name__}_cors_config"
         setattr(function, name, config)
         return function

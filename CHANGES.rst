@@ -2,6 +2,12 @@
  CHANGES
 =========
 
+Unreleased
+==========
+
+- Add ``Vary: Origin`` to non-preflight responses on routes with allowed
+  origins, preserving existing ``Vary`` values (#351).
+
 0.8.1 (2025-03-31)
 ==================
 

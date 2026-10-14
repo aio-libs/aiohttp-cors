@@ -186,6 +186,104 @@ async def test_simple_not_allowed_origin(aiohttp_client, make_app):
         assert header_name not in resp.headers
 
 
+@pytest.mark.parametrize(
+    "allowed_origins, allow_credentials",
+    [
+        (("http://client1.example.org", "http://client2.example.org"), True),
+        (("*",), False),
+    ],
+)
+@pytest.mark.parametrize(
+    "vary, expected_vary",
+    [
+        ([], ["Origin"]),
+        (["Accept-Encoding"], ["Accept-Encoding", "Origin"]),
+        (
+            ["Accept-Encoding, Accept-Language"],
+            ["Accept-Encoding, Accept-Language", "Origin"],
+        ),
+        (
+            ["Accept-Encoding", "Accept-Language"],
+            ["Accept-Encoding", "Accept-Language", "Origin"],
+        ),
+        (["Origin"], ["Origin"]),
+        (
+            ["Accept-Encoding", "Accept-Language, oRiGiN"],
+            ["Accept-Encoding", "Accept-Language, oRiGiN"],
+        ),
+        (["*"], ["*"]),
+        (["Accept-Encoding", "*"], ["Accept-Encoding", "*"]),
+    ],
+)
+async def test_simple_vary_origin(
+    aiohttp_client, allowed_origins, allow_credentials, vary, expected_vary
+):
+    app = web.Application()
+
+    async def vary_handler(request):
+        response = web.Response(text=TEST_BODY)
+        for value in vary:
+            response.headers.add(hdrs.VARY, value)
+        return response
+
+    cors = _setup(app)
+    cors.add(
+        app.router.add_route("GET", "/resource", vary_handler),
+        {
+            origin: ResourceOptions(allow_credentials=allow_credentials)
+            for origin in allowed_origins
+        },
+    )
+    client = await aiohttp_client(app)
+
+    for origin in (
+        None,
+        "http://client1.example.org",
+        "http://client2.example.org",
+        "http://denied.example.org",
+    ):
+        headers = {} if origin is None else {hdrs.ORIGIN: origin}
+        resp = await client.get("/resource", headers=headers)
+        assert resp.status == 200
+        assert await resp.text() == TEST_BODY
+        assert resp.headers.getall(hdrs.VARY, []) == expected_vary
+        allowed = origin is not None and (
+            origin in allowed_origins or "*" in allowed_origins
+        )
+        assert resp.headers.get(hdrs.ACCESS_CONTROL_ALLOW_ORIGIN) == (
+            origin if allowed else None
+        )
+        assert resp.headers.get(hdrs.ACCESS_CONTROL_ALLOW_CREDENTIALS) == (
+            "true" if allowed and allow_credentials else None
+        )
+
+
+async def test_vary_origin_scope(aiohttp_client):
+    app = web.Application()
+    cors = _setup(app)
+    app.router.add_route("GET", "/disabled", handler)
+    cors.add(app.router.add_route("GET", "/empty", handler))
+    cors.add(
+        app.router.add_route("GET", "/resource", handler),
+        {"http://client1.example.org": ResourceOptions()},
+    )
+    client = await aiohttp_client(app)
+    headers = {hdrs.ORIGIN: "http://client1.example.org"}
+
+    for path in ("/disabled", "/empty"):
+        resp = await client.get(path, headers=headers)
+        assert resp.status == 200
+        assert hdrs.VARY not in resp.headers
+        assert hdrs.ACCESS_CONTROL_ALLOW_ORIGIN not in resp.headers
+
+    resp = await client.options(
+        "/resource", headers={**headers, hdrs.ACCESS_CONTROL_REQUEST_METHOD: "GET"}
+    )
+    assert resp.status == 200
+    assert resp.headers[hdrs.ACCESS_CONTROL_ALLOW_ORIGIN] == headers[hdrs.ORIGIN]
+    assert hdrs.VARY not in resp.headers
+
+
 async def test_simple_explicit_port(aiohttp_client, make_app):
     app = make_app(None, {"http://client1.example.org": ResourceOptions()})
 

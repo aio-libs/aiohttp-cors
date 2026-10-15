@@ -15,7 +15,7 @@
 """CORS support for aiohttp."""
 
 from collections.abc import Mapping
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from aiohttp import web
 
@@ -56,7 +56,7 @@ APP_CONFIG_KEY: web.AppKey[CorsConfig] = web.AppKey("aiohttp_cors", CorsConfig)
 def setup(
     app: web.Application,
     *,
-    defaults: Mapping[str, Union[ResourceOptions, Mapping[str, Any]]] = None
+    defaults: Optional[Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]] = None
 ) -> CorsConfig:
     """Setup CORS processing for the application.
 

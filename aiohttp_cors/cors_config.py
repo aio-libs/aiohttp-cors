@@ -155,6 +155,17 @@ class _CorsConfigImpl(_PreflightHandler):
 
         config = self._router_adapter.get_non_preflight_request_config(request)
 
+        # Caches must distinguish origins even when this request has no
+        # Origin header or its origin is not allowed.
+        if config:
+            vary = {
+                value.strip().lower()
+                for header in response.headers.getall(hdrs.VARY, [])
+                for value in header.split(",")
+            }
+            if "origin" not in vary and "*" not in vary:
+                response.headers.add(hdrs.VARY, hdrs.ORIGIN)
+
         # Handle according to part 6.1 of the CORS specification.
 
         origin = request.headers.get(hdrs.ORIGIN)

@@ -1,10 +1,10 @@
 import collections
-from typing import Any, Callable, Mapping, TypeVar, Union
+from typing import Any, Callable, Mapping, TypeVar
 
 from .preflight_handler import _PreflightHandler
 from .resource_options import ResourceOptions
 
-_ConfigArg = Mapping[str, Union[ResourceOptions, Mapping[str, Any]]]
+_ConfigArg = Mapping[str, ResourceOptions]
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 

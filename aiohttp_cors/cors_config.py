@@ -113,6 +113,17 @@ class _CorsConfigImpl(_PreflightHandler):
         # headers on non-preflight requests.
         self._app.on_response_prepare.append(self._on_response_prepare)
 
+        @web.middleware
+        async def preflight_middleware(request, handler):
+            # Resources whose only route is a '*' route cannot get an
+            # injected OPTIONS route, so their preflight requests are
+            # answered here, before they reach the user's handler.
+            if self._router_adapter.is_wildcard_preflight_request(request):
+                return await self._preflight_handler(request)
+            return await handler(request)
+
+        self._app.middlewares.append(preflight_middleware)
+
     def add(self, routing_entity, config: _ConfigType = None):
         """Enable CORS for specific route or resource.
 

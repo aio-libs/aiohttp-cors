@@ -59,6 +59,12 @@ class AbstractRouterAdapter(metaclass=ABCMeta):
     def is_preflight_request(self, request: web.Request) -> bool:
         """Is `request` is a CORS preflight request."""
 
+    def is_wildcard_preflight_request(self, request: web.Request) -> bool:
+        """Is `request` a CORS preflight request that must be intercepted
+        by the CORS middleware because no OPTIONS route could be injected
+        for it."""
+        return False
+
     @abstractmethod
     def is_cors_enabled_on_request(self, request: web.Request) -> bool:
         """Is `request` is a request for CORS-enabled resource."""

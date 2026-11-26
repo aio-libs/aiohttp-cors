@@ -130,6 +130,12 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         self._resources_with_preflight_handlers = set()
         self._preflight_routes = set()
 
+        # Resources whose only route is a '*' route with a plain function
+        # handler. aiohttp forbids adding an OPTIONS route next to a '*'
+        # route, so preflight requests for these resources are handled by
+        # the CORS middleware instead of an injected OPTIONS route.
+        self._wildcard_resources = set()
+
     def add_preflight_handler(
         self,
         routing_entity: Union[web.Resource, web.StaticResource, web.ResourceRoute],
@@ -160,15 +166,20 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                             )
                         )
                 elif route_obj.method == hdrs.METH_ANY:
+                    # A '*' route matches every method, including OPTIONS,
+                    # and aiohttp forbids registering an OPTIONS route next
+                    # to it. Web views handle preflight requests themselves
+                    # through CorsViewMixin. For plain function handlers the
+                    # preflight request is intercepted by the CORS middleware
+                    # before it reaches the user's handler.
                     if _is_web_view(route_obj):
                         self._preflight_routes.add(route_obj)
                         self._resources_with_preflight_handlers.add(resource)
                         return
                     else:
-                        raise ValueError(
-                            "{!r} already has a '*' handler "
-                            "for all methods".format(resource)
-                        )
+                        self._wildcard_resources.add(resource)
+                        self._resources_with_preflight_handlers.add(resource)
+                        return
 
             preflight_route = resource.add_route(hdrs.METH_OPTIONS, handler)
             self._preflight_routes.add(preflight_route)
@@ -216,7 +227,28 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         route = self._request_route(request)
         if _is_web_view(route, strict=False):
             return request.method == "OPTIONS"
-        return route in self._preflight_routes
+        if route in self._preflight_routes:
+            return True
+        return self.is_wildcard_preflight_request(request)
+
+    def is_wildcard_preflight_request(self, request: web.Request) -> bool:
+        """Is `request` a CORS preflight request for a resource whose only
+        handler is a '*' route with a plain function handler.
+
+        Such requests cannot be served by an injected OPTIONS route, since
+        aiohttp forbids registering one next to a '*' route, so they are
+        handled by the CORS middleware before reaching the user's handler.
+        """
+        if request.method != hdrs.METH_OPTIONS:
+            return False
+        if hdrs.ORIGIN not in request.headers:
+            return False
+        if hdrs.ACCESS_CONTROL_REQUEST_METHOD not in request.headers:
+            return False
+        route = getattr(request.match_info, "route", None)
+        if route is None:
+            return False
+        return route.resource in self._wildcard_resources
 
     def is_cors_enabled_on_request(self, request: web.Request) -> bool:
         """Is `request` is a request for CORS-enabled resource."""
@@ -285,13 +317,24 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
         options = defaulted_config.get(origin, defaulted_config.get("*"))
         if options is not None and options.is_method_allowed(requested_method):
             # Requested method enabled for CORS in defaults, override it with
-            # explicit route configuration (if any).
-            route_config = resource_config.method_config.get(requested_method, {})
+            # explicit route configuration (if any). A configuration stored
+            # for a '*' route applies to every method.
+            route_config = resource_config.method_config.get(
+                requested_method,
+                resource_config.method_config.get(hdrs.METH_ANY, {}),
+            )
 
         else:
             # Requested method is not enabled in defaults.
-            # Enable CORS for it only if explicit configuration exists.
-            route_config = resource_config.method_config[requested_method]
+            # Enable CORS for it only if explicit configuration exists,
+            # either for the method itself or for a '*' route covering it.
+            if requested_method in resource_config.method_config:
+                route_config = resource_config.method_config[requested_method]
+            elif hdrs.METH_ANY in resource_config.method_config:
+                route_config = resource_config.method_config[hdrs.METH_ANY]
+            else:
+                # Raise the KeyError for the requested method, as before.
+                route_config = resource_config.method_config[requested_method]
 
         defaulted_config = collections.ChainMap(route_config, defaulted_config)
 
@@ -313,7 +356,10 @@ class ResourcesUrlDispatcherRouterAdapter(AbstractRouterAdapter):
                 request, request.method
             )
         else:
-            method_config = resource_config.method_config.get(request.method, {})
+            method_config = resource_config.method_config.get(
+                request.method,
+                resource_config.method_config.get(hdrs.METH_ANY, {}),
+            )
         defaulted_config = collections.ChainMap(
             method_config, resource_config.default_config, self._default_config
         )

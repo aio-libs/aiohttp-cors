@@ -118,3 +118,111 @@ def test_disable_bare_view(app, cors):
     route = app.router.add_route("*", "/", View)
     with pytest.raises(ValueError):
         cors.add(route)
+
+
+async def test_wildcard_route_setup_does_not_raise(app, cors):
+    """Configuring CORS for a '*' function route must not raise, see
+    https://github.com/aio-libs/aiohttp-cors/issues/241"""
+    route = app.router.add_route("*", "/wild", _handler)
+    assert cors.add(route) is route
+
+
+async def test_wildcard_route_preflight_and_actual_request(app, cors):
+    """A preflight request to a '*' route is answered by the CORS middleware
+    without reaching the user's handler, while the actual request passes
+    through with simple CORS headers."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    hits = []
+
+    async def handler(request):
+        hits.append(request.method)
+        return web.Response(text="Done")
+
+    route = app.router.add_route("*", "/wild", handler)
+    cors.add(route)
+
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        resp = await client.options(
+            "/wild",
+            headers={
+                "Origin": "http://example.com",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert resp.status == 200
+        assert resp.headers["Access-Control-Allow-Origin"] == "http://example.com"
+        assert hits == []
+
+        resp = await client.post("/wild", headers={"Origin": "http://example.com"})
+        assert resp.status == 200
+        assert await resp.text() == "Done"
+        assert resp.headers["Access-Control-Allow-Origin"] == "http://example.com"
+        assert hits == ["POST"]
+    finally:
+        await client.close()
+
+
+async def test_wildcard_route_plain_options_reaches_handler(app, cors):
+    """An OPTIONS request without preflight headers is not a preflight
+    request and must reach the user's handler."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    hits = []
+
+    async def handler(request):
+        hits.append(request.method)
+        return web.Response(text="Done")
+
+    route = app.router.add_route("*", "/wild", handler)
+    cors.add(route)
+
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        resp = await client.options("/wild", headers={"Origin": "http://example.com"})
+        assert resp.status == 200
+        assert await resp.text() == "Done"
+        assert hits == ["OPTIONS"]
+    finally:
+        await client.close()
+
+
+async def test_wildcard_route_preflight_forbidden_origin(app):
+    """A preflight request for a disallowed origin is still rejected."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    async def handler(request):
+        return web.Response(text="Done")
+
+    cors = CorsConfig(
+        app, defaults={"http://allowed.test": ResourceOptions(allow_methods="*")}
+    )
+    route = app.router.add_route("*", "/wild", handler)
+    cors.add(route)
+
+    client = TestClient(TestServer(app))
+    await client.start_server()
+    try:
+        resp = await client.options(
+            "/wild",
+            headers={
+                "Origin": "http://evil.test",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert resp.status == 403
+
+        resp = await client.options(
+            "/wild",
+            headers={
+                "Origin": "http://allowed.test",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert resp.status == 200
+        assert resp.headers["Access-Control-Allow-Origin"] == "http://allowed.test"
+    finally:
+        await client.close()
